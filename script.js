@@ -14,9 +14,12 @@ window.onload = () => {
     });
   });
 
-  if (typeof window.db !== 'undefined' && window.db && window.firestoreFunctions) {
+  if (typeof window.db !== 'undefined' && window.db && window.firestoreFunctions && window.storageFunctions) {
     carregarProdutosFirestore();
     carregarCategorias();
+  } else {
+    console.error("Firebase não inicializado corretamente:", window.db, window.firestoreFunctions, window.storageFunctions);
+    alert("Erro: Firebase não está inicializado. Verifique a console.");
   }
   mostrarSecao('painel');
 };
@@ -102,7 +105,7 @@ function confirmarCriarCategoria() {
   }
 
   const { collection, addDoc } = window.firestoreFunctions;
-  const { ref, uploadBytes, getDownloadURL } = window;
+  const { ref, uploadBytes, getDownloadURL } = window.storageFunctions; // Usando storageFunctions
 
   addDoc(collection(window.db, "categorias"), { nome, local: '', responsavel: '' })
     .then(docRef => {

@@ -235,13 +235,21 @@
         doc,
         deleteDoc
       };
+      window.storageFunctions = {
+        ref,
+        uploadBytes,
+        getDownloadURL
+      };
 
       signInAnonymously(auth).then(() => {
         console.log("Login anônimo bem-sucedido");
         onAuthStateChanged(auth, (user) => {
           if (user) {
             console.log("Usuário autenticado:", user.uid);
-            import('./script.js');
+            import('./script.js').then(() => {
+              // Chama a função de inicialização após o import
+              if (window.onload) window.onload();
+            });
           } else {
             console.error("Nenhum usuário autenticado");
             alert("Erro: Usuário não autenticado.");
@@ -255,6 +263,7 @@
       console.error("Erro ao inicializar Firebase:", error);
       alert("Erro ao iniciar Firebase: " + error.message);
     }
+  
  import './script.js';
  </script>
 </body>
