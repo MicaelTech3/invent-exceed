@@ -36,6 +36,15 @@ window.onload = () => {
   document.getElementById('toggleDark').addEventListener('click', alternarModoEscuro);
   document.getElementById('cardReceita').addEventListener('click', mostrarDetalhesReceita);
 
+  // Adiciona eventos para os itens do sidebar
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const secao = item.getAttribute('data-secao');
+      mostrarSecao(secao);
+    });
+  });
+
   // Carrega produtos do Firestore ao iniciar
   if (typeof window.db !== 'undefined' && window.db && window.firestoreFunctions) carregarProdutosFirestore();
   mostrarSecao('painel');
@@ -68,7 +77,7 @@ function mostrarSecao(secao) {
   const ativa = document.getElementById(`secao-${secao}`);
   if (ativa) ativa.style.display = "block";
 
-  const itens = document.querySelectorAll(".sidebar li");
+  const itens = document.querySelectorAll(".nav-item");
   itens.forEach(i => i.classList.remove("active"));
 
   const nomes = ['painel', 'backup', 'operacao', 'necessario', 'manutencao', 'todos'];
