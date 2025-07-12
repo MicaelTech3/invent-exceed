@@ -8,27 +8,7 @@
   <script type="module">
     // Importa os módulos do Firebase
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import {
-  getFirestore,
-  collection,
-  getDocs,
-  addDoc,
-  setDoc,
-  doc,
-  deleteDoc
-} 
-from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
-
-
-window.firestoreFunctions = {
-  collection,
-  getDocs,
-  addDoc,
-  setDoc,
-  doc,
-  deleteDoc
-};
-
+    import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     // Configuração do Firebase
     const firebaseConfig = {

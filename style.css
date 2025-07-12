@@ -407,7 +407,3 @@ body.modo-escuro .search-bar {
 body.modo-escuro .search-icon {
   color: #bbb;
 }
-
-body.modo-escuro .modal {
-  background: rgba(0, 0, 0, 0.5);
-}
