@@ -103,11 +103,15 @@ function mostrarModalCriarProduto(status) {
       <label>Quantidade:</label><input id="quantidade" type="number" min="0" required><br>
       <label>Categoria:</label><input id="categoria" type="text" required><br>
       <label>Valor Unitário:</label><input id="valor" type="number" step="0.01" min="0" required><br>
-      <button onclick="confirmarCriarProduto('${status}')">Confirmar</button>
+      <button id="confirmButton">Confirmar</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
   `;
   document.body.appendChild(modal);
+
+  // Adiciona o evento ao botão Confirmar
+  const confirmButton = modal.querySelector('#confirmButton');
+  confirmButton.addEventListener('click', () => confirmarCriarProduto(status));
 }
 
 function confirmarCriarProduto(status) {
@@ -267,11 +271,15 @@ function mostrarModalTransferencia(i, novoStatus, filtroStatus) {
       ` : `
         <label>Motivo da Transferência:</label><input id="motivo" type="text"><br>
       `}
-      <button onclick="confirmarTransferencia(${i}, '${novoStatus}', '${filtroStatus}')">Confirmar</button>
+      <button id="confirmTransferButton">Confirmar</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
   `;
   document.body.appendChild(modal);
+
+  // Adiciona o evento ao botão Confirmar
+  const confirmButton = modal.querySelector('#confirmTransferButton');
+  confirmButton.addEventListener('click', () => confirmarTransferencia(i, novoStatus, filtroStatus));
 }
 
 function confirmarTransferencia(i, novoStatus, filtroStatus) {
@@ -465,3 +473,10 @@ function atualizarListas() {
   if (secaoAtiva === 'manutencao') carregarManutencao();
   else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva)) listarProdutos(secaoAtiva);
 }
+
+window.confirmarCriarProduto = confirmarCriarProduto;
+window.mostrarModalCriarProduto = mostrarModalCriarProduto;
+window.mostrarModalTransferencia = mostrarModalTransferencia;
+window.confirmarTransferencia = confirmarTransferencia;
+window.excluirProduto = excluirProduto;
+window.mostrarDetalhesProduto = mostrarDetalhesProduto;
