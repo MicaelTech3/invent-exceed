@@ -5,10 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>INVENT</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+  <script type="module">
+    // Importa os módulos do Firebase
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import { getFirestore } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBowmtuLTQvmT9hxMIegrACBOcfQsZ53Ow",
+      authDomain: "inventario-exceed.firebaseapp.com",
+      projectId: "inventario-exceed",
+      storageBucket: "inventario-exceed.firebasestorage.app",
+      messagingSenderId: "391201279361",
+      appId: "1:391201279361:web:bfbb6ee1e19ef780372c80",
+      measurementId: "G-DVEB6FGELT"
+    };
+
+    try {
+      // Inicializa o Firebase
+      const app = initializeApp(firebaseConfig);
+      console.log("Firebase inicializado com sucesso:", app);
+      const db = getFirestore(app);
+      window.db = db; // Expõe db globalmente para script.js
+      console.log("Firestore inicializado:", db); // Log para depuração
+    } catch (error) {
+      console.error("Erro ao inicializar o Firebase:", error);
+      alert("Falha ao inicializar o Firebase. Verifique a console para mais detalhes: " + error.message);
+    }
+
+    // Importa o script principal
+    import './script.js';
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js" defer></script>
 </head>
 <body>
   <div class="container">
