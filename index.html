@@ -8,7 +8,7 @@
   <script type="module">
     // Importa os módulos do Firebase
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import { getFirestore } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     // Configuração do Firebase
     const firebaseConfig = {
@@ -27,6 +27,7 @@
       console.log("Firebase inicializado com sucesso:", app);
       const db = getFirestore(app);
       window.db = db; // Expõe db globalmente para script.js
+      window.firestoreFunctions = { collection, getDocs }; // Exporta funções úteis
       console.log("Firestore inicializado:", db); // Log para depuração
     } catch (error) {
       console.error("Erro ao inicializar o Firebase:", error);
@@ -43,12 +44,12 @@
     <nav class="sidebar">
       <h1>INVENT</h1>
       <ul>
-        <li onclick="mostrarSecao('painel')" class="active"><i>📊</i> PAINEL</li>
-        <li onclick="mostrarSecao('backup')"><i>📦</i> BACKUP</li>
-        <li onclick="mostrarSecao('operacao')"><i>🚀</i> OPERAÇÃO</li>
-        <li onclick="mostrarSecao('necessario')"><i>🔧</i> NECESSÁRIO OPS</li>
-        <li onclick="mostrarSecao('manutencao')"><i>🛠️</i> MANUTENÇÃO</li>
-        <li onclick="mostrarSecao('todos')"><i>📋</i> TODOS</li>
+        <li class="nav-item" data-secao="painel" class="active"><i>📊</i> PAINEL</li>
+        <li class="nav-item" data-secao="backup"><i>📦</i> BACKUP</li>
+        <li class="nav-item" data-secao="operacao"><i>🚀</i> OPERAÇÃO</li>
+        <li class="nav-item" data-secao="necessario"><i>🔧</i> NECESSÁRIO OPS</li>
+        <li class="nav-item" data-secao="manutencao"><i>🛠️</i> MANUTENÇÃO</li>
+        <li class="nav-item" data-secao="todos"><i>📋</i> TODOS</li>
         <li id="toggleDark"><i>🌙</i> Mudar para Modo Escuro</li>
       </ul>
     </nav>
