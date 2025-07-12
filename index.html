@@ -1,83 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>INVENT</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module">
-    // Importa os módulos do Firebase
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import {
-  getFirestore,
-  collection,
-  getDocs,
-  addDoc,
-  setDoc,
-  doc,
-  deleteDoc
-} 
-from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
-
-window.firestoreFunctions = {
-  collection,
-  getDocs,
-  addDoc,
-  setDoc,
-  doc,
-  deleteDoc
-};
-
-
-    // Configuração do Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyBowmtuLTQvmT9hxMIegrACBOcfQsZ53Ow",
-      authDomain: "inventario-exceed.firebaseapp.com",
-      projectId: "inventario-exceed",
-      storageBucket: "inventario-exceed.firebasestorage.app",
-      messagingSenderId: "391201279361",
-      appId: "1:391201279361:web:bfbb6ee1e19ef780372c80",
-      measurementId: "G-DVEB6FGELT"
-    };
-
-    try {
-      // Inicializa o Firebase
-      const app = initializeApp(firebaseConfig);
-      console.log("Firebase inicializado com sucesso:", app);
-      const db = getFirestore(app);
-      window.db = db; // Expõe db globalmente para script.js
-      window.firestoreFunctions = { collection, getDocs }; // Exporta funções úteis
-      console.log("Firestore inicializado:", db); // Log para depuração
-    } catch (error) {
-      console.error("Erro ao inicializar o Firebase:", error);
-      alert("Falha ao inicializar o Firebase. Verifique a console para mais detalhes: " + error.message);
-    }
-
-    // Importa o script principal
-    import './script.js';
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Fontes e ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Estilo -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <nav class="sidebar">
+    <aside class="sidebar">
       <h1>INVENT</h1>
       <ul>
-        <li class="nav-item" data-secao="painel" class="active"><i>📊</i> PAINEL</li>
-        <li class="nav-item" data-secao="backup"><i>📦</i> BACKUP</li>
-        <li class="nav-item" data-secao="operacao"><i>🚀</i> OPERAÇÃO</li>
-        <li class="nav-item" data-secao="necessario"><i>🔧</i> NECESSÁRIO OPS</li>
-        <li class="nav-item" data-secao="manutencao"><i>🛠️</i> MANUTENÇÃO</li>
-        <li class="nav-item" data-secao="todos"><i>📋</i> TODOS</li>
-        <li id="toggleDark"><i>🌙</i> Mudar para Modo Escuro</li>
+        <li class="nav-item active" data-secao="painel"><i class="fas fa-chart-line"></i>PAINEL</li>
+        <li class="nav-item" data-secao="backup"><i class="fas fa-box"></i>BACKUP</li>
+        <li class="nav-item" data-secao="operacao"><i class="fas fa-rocket"></i>OPERAÇÃO</li>
+        <li class="nav-item" data-secao="necessario"><i class="fas fa-wrench"></i>NECESSÁRIO OPS</li>
+        <li class="nav-item" data-secao="manutencao"><i class="fas fa-tools"></i>MANUTENÇÃO</li>
+        <li class="nav-item" data-secao="todos"><i class="fas fa-list"></i>TODOS</li>
+        <li id="toggleDark" style="cursor: pointer;"><i>🌙</i> Mudar para Modo Escuro</li>
       </ul>
-    </nav>
+    </aside>
 
     <main class="main">
       <section id="secao-painel">
         <div class="profile">
-          <img src="perfil.jpeg" alt="Avatar" class="avatar">
+          <img src="perfil.jpeg" alt="Avatar" class="avatar" />
           <h3>T.I</h3>
           <p>Proprietário</p>
           <div class="stats">
@@ -153,7 +106,7 @@ window.firestoreFunctions = {
 
       <section id="secao-necessario" style="display: none;">
         <div class="table-section">
-          <h3>Produtos em Manutenção</h3>
+          <h3>Produtos em Necessário OPS</h3>
           <table>
             <thead>
               <tr>
@@ -209,5 +162,52 @@ window.firestoreFunctions = {
       </section>
     </main>
   </div>
+
+  <!-- Firebase v9 Modules + inicialização -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      addDoc,
+      setDoc,
+      doc,
+      deleteDoc
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBowmtuLTQvmT9hxMIegrACBOcfQsZ53Ow",
+      authDomain: "inventario-exceed.firebaseapp.com",
+      projectId: "inventario-exceed",
+      storageBucket: "inventario-exceed.firebasestorage.app",
+      messagingSenderId: "391201279361",
+      appId: "1:391201279361:web:bfbb6ee1e19ef780372c80",
+      measurementId: "G-DVEB6FGELT"
+    };
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      window.db = db;
+      window.firestoreFunctions = {
+        collection,
+        getDocs,
+        addDoc,
+        setDoc,
+        doc,
+        deleteDoc
+      };
+      console.log("Firebase e Firestore inicializados com sucesso.");
+    } catch (error) {
+      console.error("Erro ao inicializar Firebase:", error);
+      alert("Erro ao iniciar Firebase: " + error.message);
+    }
+
+    import './script.js';
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
