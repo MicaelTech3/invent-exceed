@@ -105,7 +105,7 @@ function confirmarCriarCategoria() {
   }
 
   const { collection, addDoc } = window.firestoreFunctions;
-  const { ref, uploadBytes, getDownloadURL } = window.storageFunctions; // Usando storageFunctions
+  const { ref, uploadBytes, getDownloadURL } = window.storageFunctions;
 
   addDoc(collection(window.db, "categorias"), { nome, local: '', responsavel: '' })
     .then(docRef => {
@@ -150,7 +150,7 @@ function carregarCategorias() {
       const card = document.createElement("div");
       card.className = "categoria-card";
       card.innerHTML = `
-        <img src="${data.icon || 'https://via.placeholder.com/48'}" alt="Ícone de ${data.nome}">
+        <img src="${data.icon || 'https://placehold.co/48x48'}" alt="Ícone de ${data.nome}">
         <div>
           <strong>${data.nome}</strong><br>
           <small>${data.local || 'N/A'} • ${data.responsavel || 'N/A'}</small>
