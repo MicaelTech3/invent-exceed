@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INVENT</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h1>INVENT</h1>
+      <ul>
+        <li onclick="mostrarSecao('painel')" class="active"><i>📊</i> PAINEL</li>
+        <li onclick="mostrarSecao('backup')"><i>📦</i> BACKUP</li>
+        <li onclick="mostrarSecao('operacao')"><i>🚀</i> OPERAÇÃO</li>
+        <li onclick="mostrarSecao('necessario')"><i>🔧</i> NECESSÁRIO OPS</li>
+        <li onclick="mostrarSecao('manutencao')"><i>🛠️</i> MANUTENÇÃO</li>
+        <li onclick="mostrarSecao('todos')"><i>📋</i> TODOS</li>
+        <li id="toggleDark"><i>🌙</i> Mudar para Modo Escuro</li>
+      </ul>
+    </nav>
+
+    <main class="main">
+      <section id="secao-painel">
+        <div class="profile">
+          <img src="perfil.jpeg" alt="Avatar" class="avatar">
+          <h3>T.I</h3>
+          <p>Proprietário</p>
+          <div class="stats">
+            <div>
+              <strong>0</strong>
+              <p>Total Backup</p>
+            </div>
+            <div>
+              <strong>0</strong>
+              <p>Produtos</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card income" id="cardReceita">
+            <h3>Unidades (Total)</h3>
+            <p>R$ 0.00</p>
+          </div>
+          <div class="card visits" id="cardBackup">
+            <h3>Unidades (Backup)</h3>
+            <p>0</p>
+          </div>
+          <div class="card sales" id="cardOperacao">
+            <h3>Unidades (Operação)</h3>
+            <p>0</p>
+          </div>
+        </div>
+
+        <div class="chart">
+          <h3>Visão Geral</h3>
+          <canvas id="grafico"></canvas>
+        </div>
+      </section>
+
+      <section id="secao-backup" style="display: none;">
+        <div class="table-section">
+          <h3>Produtos em Backup</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="secao-operacao" style="display: none;">
+        <div class="table-section">
+          <h3>Produtos em Operação</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="secao-necessario" style="display: none;">
+        <div class="table-section">
+          <h3>Produtos em Manutenção</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="secao-manutencao" style="display: none;">
+        <div class="table-section">
+          <h3>Produtos em Manutenção</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Defeito</th>
+                <th>Local de Conserto</th>
+                <th>Custo</th>
+                <th>Agendamento</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="secao-todos" style="display: none;">
+        <div class="table-section">
+          <h3>Todos os Produtos</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

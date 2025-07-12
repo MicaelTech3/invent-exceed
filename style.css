@@ -1,0 +1,409 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: #f4f6f9;
+  color: #333;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #2f3542 0%, #1b1b2b 100%);
+  color: white;
+  padding: 1.5rem;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h1 {
+  margin-bottom: 2.5rem;
+  font-size: 1.8rem;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.sidebar ul {
+  list-style: none;
+}
+
+.sidebar li {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.sidebar li i {
+  margin-right: 12px;
+  font-size: 1.2rem;
+}
+
+.sidebar li.active,
+.sidebar li:hover {
+  background: #57606f;
+  transform: translateX(5px);
+}
+
+.main {
+  flex: 1;
+  padding: 2.5rem;
+  overflow-y: auto;
+}
+
+.profile {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.profile:hover {
+  transform: translateY(-5px);
+}
+
+.avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  border: 3px solid #1e90ff;
+}
+
+.profile .stats {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  padding: 1.5rem;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card.income {
+  background: linear-gradient(135deg, #ff6b81 0%, #ff8a9a 100%);
+}
+.card.visits {
+  background: linear-gradient(135deg, #ffa502 0%, #ffbc3b 100%);
+}
+.card.sales {
+  background: linear-gradient(135deg, #1e90ff 0%, #4dabff 100%);
+}
+
+.chart {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.chart h3 {
+  margin-bottom: 1.2rem;
+  font-size: 1.3rem;
+}
+
+.table-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.table-section h3 {
+  margin-bottom: 1.2rem;
+  font-size: 1.3rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+th {
+  font-weight: 600;
+  color: #555;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-bar {
+  padding: 10px 40px 10px 15px;
+  width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.search-bar:focus {
+  border-color: #1e90ff;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  color: #666;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.table-section button.criar-produto {
+  padding: 10px 20px;
+  background: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.table-section button.criar-produto:hover {
+  background: #1565c0;
+}
+
+td input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+td button {
+  padding: 8px 12px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+td button:nth-child(1) {
+  background: #4caf50;
+  color: white;
+}
+
+td button:nth-child(2) {
+  background: #2196f3;
+  color: white;
+}
+
+td button:nth-child(3) {
+  background: #f44336;
+  color: white;
+}
+
+td button:hover {
+  filter: brightness(85%);
+}
+
+.back-button {
+  padding: 10px 20px;
+  background: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+  transition: background 0.3s ease;
+}
+
+.back-button:hover {
+  background: #1565c0;
+}
+
+.product-details {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.product-details p {
+  margin: 0.5rem 0;
+}
+
+.product-details ul {
+  list-style: none;
+  padding: 0;
+}
+
+.product-details ul li {
+  margin: 0.5rem 0;
+}
+
+.action-buttons {
+  margin-top: 1rem;
+  display: flex;
+  gap: 10px;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-bottom: 1.5rem;
+}
+
+.modal-content label {
+  display: block;
+  margin: 0.5rem 0 0.2rem;
+  font-weight: 500;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.modal-content button {
+  padding: 10px 20px;
+  margin-right: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.modal-content button:first-of-type {
+  background: #1e90ff;
+  color: white;
+}
+
+.modal-content button:last-of-type {
+  background: #f44336;
+  color: white;
+}
+
+/* MODO ESCURO */
+body.modo-escuro {
+  background: #1e1e2f;
+  color: #f1f1f1;
+}
+
+body.modo-escuro .main,
+body.modo-escuro .profile,
+body.modo-escuro .chart,
+body.modo-escuro .table-section,
+body.modo-escuro .product-details {
+  background: #2e2e3e;
+}
+
+body.modo-escuro .sidebar {
+  background: linear-gradient(180deg, #1b1b2b 0%, #12121f 100%);
+}
+
+body.modo-escuro table th,
+body.modo-escuro table td {
+  border-color: #444;
+}
+
+body.modo-escuro .card {
+  color: white;
+}
+
+body.modo-escuro .table-section button.criar-produto,
+body.modo-escuro .back-button {
+  background: #1565c0;
+}
+
+body.modo-escuro .table-section button.criar-produto:hover,
+body.modo-escuro .back-button:hover {
+  background: #0d47a1;
+}
+
+body.modo-escuro .modal-content {
+  background: #2e2e3e;
+  color: #f1f1f1;
+}
+
+body.modo-escuro .modal-content input,
+body.modo-escuro .search-bar {
+  background: #3e3e4e;
+  border-color: #555;
+  color: #f1f1f1;
+}
+
+body.modo-escuro .search-icon {
+  color: #bbb;
+}
