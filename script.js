@@ -473,3 +473,10 @@ function atualizarListas() {
   if (secaoAtiva === 'manutencao') carregarManutencao();
   else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva)) listarProdutos(secaoAtiva);
 }
+
+window.confirmarCriarProduto = confirmarCriarProduto;
+window.mostrarModalCriarProduto = mostrarModalCriarProduto;
+window.excluirProduto = excluirProduto;
+window.listarProdutos = listarProdutos;
+window.mostrarDetalhesProduto = mostrarDetalhesProduto;
+window.mostrarModalTransferencia = mostrarModalTransferencia;
