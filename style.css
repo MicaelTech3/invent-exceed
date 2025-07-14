@@ -576,3 +576,49 @@ body.modo-escuro .modal {
   padding: 5px;
   font-size: 14px;
 }
+.table-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.delete-category-btn, .criar-produto, .export-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.delete-category-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+.delete-category-btn:hover {
+  background-color: #c0392b;
+}
+.criar-produto {
+  background-color: #3498db;
+  color: white;
+}
+.criar-produto:hover {
+  background-color: #2980b9;
+}
+.export-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+.export-btn:hover {
+  background-color: #45a049;
+}
+.category-filter {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.category-filter select {
+  padding: 5px;
+  font-size: 14px;
+}
+table td, table th {
+  text-align: left;
+  padding: 8px;
+}

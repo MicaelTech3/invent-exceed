@@ -80,7 +80,9 @@ function mostrarSecao(secao) {
   const index = nomes.indexOf(secao);
   if (index >= 0) itens[index].classList.add("active");
 
-  if (!['categoria-detalhes', 'todos'].includes(secao)) {
+  // Always add to navigation history, unless it's the current section
+  const currentSection = navigationHistory[navigationHistory.length - 1];
+  if (secao !== currentSection) {
     navigationHistory.push(secao);
     if (navigationHistory.length > 10) navigationHistory.shift();
   }
@@ -102,11 +104,11 @@ function mostrarSecao(secao) {
 
 function voltar() {
   if (navigationHistory.length > 1) {
-    navigationHistory.pop();
+    navigationHistory.pop(); // Remove current section
     const previousSection = navigationHistory[navigationHistory.length - 1];
     mostrarSecao(previousSection);
   } else {
-    mostrarSecao('painel');
+    mostrarSecao('painel'); // Fallback to painel if history is empty
   }
 }
 
@@ -298,7 +300,7 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
     tr.innerHTML = `
       <td onclick="mostrarDetalhesProduto(${i}, 'categoria-detalhes')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.status === 'manutencao' ? (produto.localConserto || 'N/A') : 'N/A'}</td>
       <td>${produto.email || 'N/A'}</td>
@@ -324,9 +326,6 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   deleteButton.onclick = () => excluirCategoria(categoriaId, nomeCategoria);
   actionBar.appendChild(deleteButton);
   tabela.parentElement.appendChild(actionBar);
-
-  const itens = document.querySelectorAll(".nav-item");
-  itens.forEach(i => i.classList.remove("active"));
 }
 
 function mostrarModalExcluirCategoria() {
@@ -532,7 +531,7 @@ function listarProdutosPainel() {
           ${categorias.map(c => `<option value="${c.nome}" ${produto.categoria === c.nome ? 'selected' : ''}>${c.nome}</option>`).join('')}
         </select>
       </td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
@@ -577,13 +576,13 @@ function exportarParaExcel() {
     p.nome,
     p.quantidade,
     p.categoria || 'N/A',
-    `R$ ${p.valor.toFixed(2)}`,
+    p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
     p.status,
     p.email || 'N/A',
     p.jogo || 'N/A',
     p.defeito || 'N/A',
     p.localConserto || 'N/A',
-    p.custoManutencao ? `R$ ${p.custoManutencao.toFixed(2)}` : 'N/A',
+    p.custoManutencao ? p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'N/A',
     p.agendamento || 'N/A'
   ].map(cell => `"${cell}"`).join('\t'));
 
@@ -650,7 +649,7 @@ function listarProdutos(filtroStatus) {
       <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i}, 'todos')" style="cursor: pointer;"` : ''}>${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>${produto.categoria}</td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
@@ -764,14 +763,14 @@ function mostrarDetalhesProduto(i, origem) {
           <p><strong>Nome:</strong> ${produtos[i].nome}</p>
           <p><strong>Quantidade:</strong> ${produtos[i].quantidade}</p>
           <p><strong>Categoria:</strong> ${produtos[i].categoria || 'N/A'}</p>
-          <p><strong>Valor Unitário:</strong> R$ ${produtos[i].valor.toFixed(2)}</p>
+          <p><strong>Valor Unitário:</strong> ${produtos[i].valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
           <p><strong>Status:</strong> ${produtos[i].status}</p>
           <p><strong>Email:</strong> ${produtos[i].email || 'N/A'}</p>
           <p><strong>Jogo:</strong> ${produtos[i].jogo || 'N/A'}</p>
           ${produtos[i].status === 'manutencao' ? `
             <p><strong>Defeito:</strong> ${produtos[i].defeito || 'N/A'}</p>
             <p><strong>Local de Conserto:</strong> ${produtos[i].localConserto || 'N/A'}</p>
-            <p><strong>Custo de Manutenção:</strong> R$ ${produtos[i].custoManutencao.toFixed(2)}</p>
+            <p><strong>Custo de Manutenção:</strong> ${produtos[i].custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
             <p><strong>Agendamento:</strong> ${produtos[i].agendamento || 'N/A'}</p>
           ` : ''}
           <p><strong>Histórico de Transferências:</strong></p>
@@ -830,7 +829,7 @@ function mostrarDetalhesReceita() {
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: R$ ${totalReceita.toFixed(2)}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
+  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
 }
 
 function atualizarDashboard(filtroCategoria = '') {
@@ -845,11 +844,11 @@ function atualizarDashboard(filtroCategoria = '') {
   const backupCardElement = document.querySelector('#cardBackup p');
   const operacaoCardElement = document.querySelector('#cardOperacao p');
 
-  if (backupElement) backupElement.textContent = totalBackup.toLocaleString();
-  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString();
-  if (receitaElement) receitaElement.textContent = `R$ ${produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
-  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString();
-  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString();
+  if (backupElement) backupElement.textContent = totalBackup.toLocaleString('pt-BR');
+  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString('pt-BR');
+  if (receitaElement) receitaElement.textContent = produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString('pt-BR');
+  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString('pt-BR');
 }
 
 function carregarManutencao() {
@@ -867,7 +866,7 @@ function carregarManutencao() {
         <td>${p.nome}</td>
         <td>${p.defeito || 'N/A'}</td>
         <td><input type="text" value="${p.localConserto || ''}" onchange="atualizarLocalConserto('${p.id}', this.value)"></td>
-        <td>R$ ${p.custoManutencao.toFixed(2)}</td>
+        <td>${p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
         <td>${p.agendamento || 'N/A'}</td>
         <td>${p.email || 'N/A'}</td>
         <td>${p.jogo || 'N/A'}</td>
