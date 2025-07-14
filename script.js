@@ -1,6 +1,7 @@
 /* @ts-nocheck */
 let produtos = [];
 let categorias = [];
+let navigationHistory = ['painel'];
 
 function debounce(func, wait) {
   let timeout;
@@ -79,6 +80,12 @@ function mostrarSecao(secao) {
   const index = nomes.indexOf(secao);
   if (index >= 0) itens[index].classList.add("active");
 
+  const currentSection = navigationHistory[navigationHistory.length - 1];
+  if (secao !== currentSection) {
+    navigationHistory.push(secao);
+    if (navigationHistory.length > 10) navigationHistory.shift();
+  }
+
   if (['backup', 'operacao', 'necessario', 'todos'].includes(secao)) {
     const status = secao === 'operacao' ? 'operacao' :
                    secao === 'necessario' ? 'necessario' :
@@ -87,11 +94,21 @@ function mostrarSecao(secao) {
   }
 
   if (secao === 'painel') {
-    atualizarDashboard();
+    atualizarDashboard('');
     listarProdutosPainel();
   }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
+}
+
+function voltar() {
+  if (navigationHistory.length > 1) {
+    navigationHistory.pop();
+    const previousSection = navigationHistory[navigationHistory.length - 1];
+    mostrarSecao(previousSection);
+  } else {
+    mostrarSecao('painel');
+  }
 }
 
 function mostrarModalCriarCategoria() {
@@ -184,6 +201,7 @@ function confirmarCriarCategoria() {
       document.querySelector('.modal')?.remove();
       carregarCategorias();
       listarProdutosPainel();
+      atualizarFiltroCategoria();
     })
     .catch(error => {
       console.error("Erro ao criar categoria:", error);
@@ -218,10 +236,23 @@ function carregarCategorias() {
       newCard.onclick = () => filtrarPorCategoria(data.nome, doc.id);
       container.appendChild(newCard);
     });
+    atualizarFiltroCategoria();
     listarProdutosPainel();
   }).catch(error => {
     console.error("Erro ao carregar categorias:", error);
     alert("Falha ao carregar categorias do Firebase.");
+  });
+}
+
+function atualizarFiltroCategoria() {
+  const filtroCategoria = document.getElementById('filtroCategoria');
+  if (!filtroCategoria) return;
+  filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
+  categorias.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c.nome;
+    option.textContent = c.nome;
+    filtroCategoria.appendChild(option);
   });
 }
 
@@ -242,18 +273,33 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   const header = document.createElement("div");
   header.className = "table-header";
   header.innerHTML = `
-    <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
+    <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
     <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Criar Produto</button>
   `;
   tabela.parentElement.insertBefore(header, tabela);
 
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Nome</th>
+      <th>Qtd</th>
+      <th>Valor</th>
+      <th>Status</th>
+      <th>Local de Conserto</th>
+      <th>Email</th>
+      <th>Jogo</th>
+      <th>Ações</th>
+    </tr>
+  `;
+  tabela.appendChild(thead);
+
   const tbody = document.createElement("tbody");
-  produtosFiltrados.forEach((produto, i) => {
+  produtosFiltrados.forEach((produto) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto('${produto.id}', 'categoria-detalhes')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.status === 'manutencao' ? (produto.localConserto || 'N/A') : 'N/A'}</td>
       <td>${produto.email || 'N/A'}</td>
@@ -262,9 +308,9 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
         ${['backup', 'operacao', 'necessario', 'manutencao']
           .filter(opt => opt !== produto.status)
           .map(opt => `
-            <button onclick="mostrarModalTransferencia(${i}, '${opt}', 'categoria')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
+            <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'categoria')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
           `).join('')}
-        <button onclick="excluirProduto(${i}, 'categoria')">🗑️</button>
+        <button onclick="excluirProduto('${produto.id}', 'categoria')">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -279,9 +325,6 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   deleteButton.onclick = () => excluirCategoria(categoriaId, nomeCategoria);
   actionBar.appendChild(deleteButton);
   tabela.parentElement.appendChild(actionBar);
-
-  const itens = document.querySelectorAll(".nav-item");
-  itens.forEach(i => i.classList.remove("active"));
 }
 
 function mostrarModalExcluirCategoria() {
@@ -334,6 +377,7 @@ function excluirCategoria(categoriaId, nomeCategoria) {
             document.querySelector('.modal')?.remove();
             carregarCategorias();
             listarProdutosPainel();
+            atualizarFiltroCategoria();
             const secao = document.getElementById("secao-categoria-detalhes");
             if (secao) secao.style.display = "none";
             mostrarSecao('painel');
@@ -357,7 +401,7 @@ function mostrarModalCriarProduto(status, categoriaPreenchida = '') {
     <div class="modal-content">
       <h3>Criar Novo Produto</h3>
       <label>Nome:</label><input id="nome" type="text" required><br>
-      <label>Quantidade:</label><input id="quantidade" type="number" min="0" required><br>
+      <label>Quantidade:</label><input id="quantidade" type="number" min="1" required><br>
       <label>Categoria:</label><input id="categoria" type="text" value="${categoriaPreenchida}" required><br>
       <label>Valor Unitário:</label><input id="valor" type="number" step="0.01" min="0" required><br>
       <label>Status:</label>
@@ -376,19 +420,19 @@ function mostrarModalCriarProduto(status, categoriaPreenchida = '') {
   document.body.appendChild(modal);
 
   const confirmButton = modal.querySelector('#confirmButton');
-  confirmButton.addEventListener('click', () => confirmarCriarProduto(status));
+  confirmButton.addEventListener('click', () => confirmarCriarProduto(status, categoriaPreenchida));
 }
 
-function confirmarCriarProduto(status) {
+function confirmarCriarProduto(status, categoriaPreenchida) {
   const nome = document.getElementById('nome')?.value.trim();
-  const quantidade = parseInt(document.getElementById('quantidade')?.value || 0);
+  const quantidade = parseInt(document.getElementById('quantidade')?.value || 1);
   const categoria = document.getElementById('categoria')?.value.trim();
   const valor = parseFloat(document.getElementById('valor')?.value || 0);
   const selectedStatus = document.getElementById('status')?.value;
   const email = document.getElementById('email')?.value.trim() || '';
   const jogo = document.getElementById('jogo')?.value.trim() || '';
 
-  if (!nome || quantidade < 0 || !categoria || valor < 0 || !selectedStatus) {
+  if (!nome || quantidade < 1 || !categoria || valor < 0 || !selectedStatus) {
     alert("Por favor, preencha todos os campos obrigatórios corretamente.");
     return;
   }
@@ -398,9 +442,10 @@ function confirmarCriarProduto(status) {
     return;
   }
 
+  const { collection, addDoc } = window.firestoreFunctions;
   const novoProduto = {
     nome,
-    quantidade,
+    quantidade: 1,
     categoria,
     valor,
     status: selectedStatus,
@@ -412,9 +457,38 @@ function confirmarCriarProduto(status) {
     agendamento: selectedStatus === 'manutencao' ? '' : '',
     historicoTransferencias: []
   };
-  adicionarProdutoFirestore(novoProduto);
-  document.querySelector('.modal')?.remove();
-  atualizarDashboard();
+
+  const createPromises = [];
+  for (let i = 0; i < quantidade; i++) {
+    createPromises.push(
+      addDoc(collection(window.db, "produtos"), { ...novoProduto })
+        .then(docRef => ({ ...novoProduto, id: docRef.id }))
+        .catch(error => {
+          console.error("Erro ao adicionar produto:", error);
+          throw new Error("Falha ao adicionar produto ao Firebase.");
+        })
+    );
+  }
+
+  Promise.all(createPromises).then(newProducts => {
+    newProducts.forEach(produto => produtos.push(produto));
+    document.querySelector('.modal')?.remove();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+
+    const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
+    if (secaoAtiva === 'categoria-detalhes' && categoriaPreenchida === novoProduto.categoria) {
+      filtrarPorCategoria(novoProduto.categoria, categorias.find(c => c.nome === novoProduto.categoria)?.id || '');
+    } else if (secaoAtiva === 'manutencao' && novoProduto.status === 'manutencao') {
+      carregarManutencao();
+    } else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva) && novoProduto.status === status) {
+      listarProdutos(status);
+    } else if (secaoAtiva === 'painel') {
+      listarProdutosPainel();
+    }
+  }).catch(error => {
+    console.error("Erro ao criar produtos:", error);
+    alert(error.message);
+  });
 }
 
 function carregarProdutosFirestore() {
@@ -430,26 +504,11 @@ function carregarProdutosFirestore() {
       produtos.push({ id: doc.id, ...doc.data() });
     });
     atualizarListas();
-    atualizarDashboard();
+    atualizarDashboard('');
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao carregar produtos:", error);
     alert("Erro ao carregar produtos do Firebase.");
-  });
-}
-
-function adicionarProdutoFirestore(produto) {
-  if (!window.db || !window.firestoreFunctions) return;
-  const { collection, addDoc } = window.firestoreFunctions;
-  addDoc(collection(window.db, "produtos"), produto).then((docRef) => {
-    produto.id = docRef.id;
-    produtos.push(produto);
-    atualizarListas();
-    atualizarDashboard();
-    listarProdutosPainel();
-  }).catch((error) => {
-    console.error("Erro ao adicionar produto:", error);
-    alert("Falha ao adicionar produto ao Firebase.");
   });
 }
 
@@ -460,7 +519,7 @@ function atualizarProdutoFirestore(produto) {
     const index = produtos.findIndex(p => p.id === produto.id);
     if (index !== -1) produtos[index] = produto;
     atualizarListas();
-    atualizarDashboard();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao atualizar produto:", error);
@@ -475,10 +534,10 @@ function listarProdutosPainel() {
   const tbody = tabela.querySelector('tbody');
   tbody.innerHTML = "";
 
-  produtos.forEach((produto, i) => {
+  produtos.forEach((produto) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto('${produto.id}', 'painel')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>
         <select onchange="atualizarCategoriaProduto('${produto.id}', this.value)">
@@ -486,7 +545,7 @@ function listarProdutosPainel() {
           ${categorias.map(c => `<option value="${c.nome}" ${produto.categoria === c.nome ? 'selected' : ''}>${c.nome}</option>`).join('')}
         </select>
       </td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
@@ -494,9 +553,9 @@ function listarProdutosPainel() {
         ${['backup', 'operacao', 'necessario', 'manutencao']
           .filter(opt => opt !== produto.status)
           .map(opt => `
-            <button onclick="mostrarModalTransferencia(${i}, '${opt}', 'todos')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
+            <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'todos')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
           `).join('')}
-        <button onclick="excluirProduto(${i}, 'todos')">🗑️</button>
+        <button onclick="excluirProduto('${produto.id}', 'todos')">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -513,12 +572,42 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
       .then(() => {
         listarProdutosPainel();
         atualizarListas();
+        atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
       })
       .catch(error => {
         console.error("Erro ao atualizar categoria do produto:", error);
         alert("Falha ao atualizar categoria do produto.");
       });
   }
+}
+
+function exportarParaExcel() {
+  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+
+  const headers = ['Nome', 'Quantidade', 'Categoria', 'Valor Unitário', 'Status', 'Email', 'Jogo', 'Defeito', 'Local de Conserto', 'Custo', 'Agendamento'];
+  const rows = produtosFiltrados.map(p => [
+    p.nome,
+    p.quantidade,
+    p.categoria || 'N/A',
+    p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+    p.status,
+    p.email || 'N/A',
+    p.jogo || 'N/A',
+    p.defeito || 'N/A',
+    p.localConserto || 'N/A',
+    p.custoManutencao ? p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'N/A',
+    p.agendamento || 'N/A'
+  ].map(cell => `"${cell}"`).join('\t'));
+
+  const tsvContent = [headers.join('\t'), ...rows].join('\n');
+  
+  navigator.clipboard.writeText(tsvContent).then(() => {
+    alert("Dados copiados para a área de transferência! Cole em uma planilha (como Excel).");
+  }).catch(error => {
+    console.error("Erro ao copiar dados:", error);
+    alert("Falha ao copiar dados para a área de transferência.");
+  });
 }
 
 function listarProdutos(filtroStatus) {
@@ -567,22 +656,22 @@ function listarProdutos(filtroStatus) {
     filtrarProdutos(filtroStatus) : 
     produtos.filter(p => p.status === filtroStatus);
 
-  filteredProdutos.forEach((produto, i) => {
+  filteredProdutos.forEach((produto) => {
     const tr = document.createElement("tr");
     const validOptions = ['backup', 'operacao', 'necessario', 'manutencao'].filter(opt => opt !== produto.status);
     tr.innerHTML = `
-      <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;"` : ''}>${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto('${produto.id}', '${filtroStatus}')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>${produto.categoria}</td>
-      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
       <td>
         ${validOptions.map(opt => `
-          <button onclick="mostrarModalTransferencia(${i}, '${opt}', '${filtroStatus}')">${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
+          <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', '${filtroStatus}')">${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
         `).join('')}
-        <button onclick="excluirProduto(${i}, '${filtroStatus}')">🗑️</button>
+        <button onclick="excluirProduto('${produto.id}', '${filtroStatus}')">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -597,17 +686,24 @@ function filtrarProdutos(filtroStatus) {
   );
 }
 
-function mostrarModalTransferencia(i, novoStatus, filtroStatus) {
+function mostrarModalTransferencia(produtoId, novoStatus, filtroStatus) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Produto não encontrado para ID:", produtoId);
+    alert("Erro: Produto não encontrado.");
+    return;
+  }
+
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Transferir "${produtos[i].nome}" para ${novoStatus}</h3>
+      <h3>Transferir "${produto.nome}" para ${novoStatus}</h3>
       ${novoStatus === 'manutencao' ? `
-        <label>Defeito:</label><input id="defeito" type="text" value="${produtos[i].defeito || ''}"><br>
-        <label>Local de Conserto:</label><input id="localConserto" type="text" value="${produtos[i].localConserto || ''}"><br>
-        <label>Custo Estimado:</label><input id="custoManutencao" type="number" step="0.01" value="${produtos[i].custoManutencao || 0}"><br>
-        <label>Agendamento (opcional):</label><input id="agendamento" type="text" value="${produtos[i].agendamento || ''}"><br>
+        <label>Defeito:</label><input id="defeito" type="text" value="${produto.defeito || ''}"><br>
+        <label>Local de Conserto:</label><input id="localConserto" type="text" value="${produto.localConserto || ''}"><br>
+        <label>Custo Estimado:</label><input id="custoManutencao" type="number" step="0.01" value="${produto.custoManutencao || 0}"><br>
+        <label>Agendamento (opcional):</label><input id="agendamento" type="text" value="${produto.agendamento || ''}"><br>
       ` : `
         <label>Motivo da Transferência:</label><input id="motivo" type="text"><br>
       `}
@@ -618,12 +714,24 @@ function mostrarModalTransferencia(i, novoStatus, filtroStatus) {
   document.body.appendChild(modal);
 
   const confirmButton = modal.querySelector('#confirmTransferButton');
-  confirmButton.addEventListener('click', () => confirmarTransferencia(i, novoStatus, filtroStatus));
+  confirmButton.addEventListener('click', () => confirmarTransferencia(produtoId, novoStatus, filtroStatus));
 }
 
-function confirmarTransferencia(i, novoStatus, filtroStatus) {
-  if (!window.db || !window.firestoreFunctions) return;
+function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
+  if (!window.db || !window.firestoreFunctions) {
+    console.error("Firebase não inicializado para transferência.");
+    alert("Erro: Firebase não inicializado.");
+    return;
+  }
+
   const { doc, setDoc } = window.firestoreFunctions;
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Produto não encontrado para ID:", produtoId);
+    alert("Erro: Produto não encontrado.");
+    return;
+  }
+
   let detalhes = {};
   if (novoStatus === 'manutencao') {
     detalhes.defeito = document.getElementById('defeito')?.value || "";
@@ -634,98 +742,179 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
     detalhes.motivo = document.getElementById('motivo')?.value || "";
   }
 
-  const statusAtual = produtos[i].status;
-  produtos[i].status = novoStatus;
+  const statusAtual = produto.status;
+  produto.status = novoStatus;
   if (novoStatus === 'manutencao') {
-    produtos[i].defeito = detalhes.defeito;
-    produtos[i].localConserto = detalhes.localConserto;
-    produtos[i].custoManutencao = detalhes.custoManutencao;
-    produtos[i].agendamento = detalhes.agendamento;
+    produto.defeito = detalhes.defeito;
+    produto.localConserto = detalhes.localConserto;
+    produto.custoManutencao = detalhes.custoManutencao;
+    produto.agendamento = detalhes.agendamento;
   } else {
-    produtos[i].defeito = "";
-    produtos[i].localConserto = "";
-    produtos[i].custoManutencao = 0;
-    produtos[i].agendamento = "";
-    produtos[i].motivoTransferencia = detalhes.motivo;
+    produto.defeito = "";
+    produto.localConserto = "";
+    produto.custoManutencao = 0;
+    produto.agendamento = "";
+    produto.motivoTransferencia = detalhes.motivo;
   }
 
-  produtos[i].historicoTransferencias = produtos[i].historicoTransferencias || [];
-  produtos[i].historicoTransferencias.push({
+  produto.historicoTransferencias = produto.historicoTransferencias || [];
+  produto.historicoTransferencias.push({
     de: statusAtual,
     para: novoStatus,
     data: new Date().toLocaleString(),
     detalhes
   });
 
-  setDoc(doc(window.db, "produtos", produtos[i].id), produtos[i]).then(() => {
+  console.log("Atualizando produto no Firebase:", produto);
+  setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
+    console.log("Produto atualizado com sucesso no Firebase:", produto.id);
     document.querySelector('.modal')?.remove();
-    atualizarDashboard();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
     if (filtroStatus === 'categoria') {
-      filtrarPorCategoria(produtos[i].categoria, categorias.find(c => c.nome === produtos[i].categoria)?.id || '');
-    } else if (filtroStatus !== 'todos') {
+      filtrarPorCategoria(produto.categoria, categorias.find(c => c.nome === produto.categoria)?.id || '');
+    } else if (secaoAtiva === 'manutencao' || novoStatus === 'manutencao') {
+      carregarManutencao();
+    } else if (['backup', 'operacao', 'necessario', 'todos'].includes(filtroStatus)) {
       listarProdutos(filtroStatus);
-      if (novoStatus === 'manutencao') carregarManutencao();
     } else {
-      listarProdutos(filtroStatus);
       listarProdutosPainel();
     }
   }).catch((error) => {
     console.error("Erro ao transferir produto:", error);
-    alert("Falha ao transferir produto no Firebase.");
+    alert("Falha ao transferir produto no Firebase: " + error.message);
   });
 }
 
-function mostrarDetalhesProduto(i) {
-  const secao = document.getElementById("secao-todos");
-  if (secao) {
-    secao.style.display = "block";
-    document.querySelectorAll("main > section:not(#secao-todos)").forEach(s => s.style.display = "none");
-    secao.innerHTML = `
-      <div class="table-section">
-        <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
-        <h3>Detalhes do Produto: ${produtos[i].nome}</h3>
-        <div class="product-details">
-          <p><strong>Nome:</strong> ${produtos[i].nome}</p>
-          <p><strong>Quantidade:</strong> ${produtos[i].quantidade}</p>
-          <p><strong>Categoria:</strong> ${produtos[i].categoria || 'N/A'}</p>
-          <p><strong>Valor Unitário:</strong> R$ ${produtos[i].valor.toFixed(2)}</p>
-          <p><strong>Status:</strong> ${produtos[i].status}</p>
-          <p><strong>Email:</strong> ${produtos[i].email || 'N/A'}</p>
-          <p><strong>Jogo:</strong> ${produtos[i].jogo || 'N/A'}</p>
-          ${produtos[i].status === 'manutencao' ? `
-            <p><strong>Defeito:</strong> ${produtos[i].defeito || 'N/A'}</p>
-            <p><strong>Local de Conserto:</strong> ${produtos[i].localConserto || 'N/A'}</p>
-            <p><strong>Custo de Manutenção:</strong> R$ ${produtos[i].custoManutencao.toFixed(2)}</p>
-            <p><strong>Agendamento:</strong> ${produtos[i].agendamento || 'N/A'}</p>
-          ` : ''}
-          <p><strong>Histórico de Transferências:</strong></p>
-          <ul>
-            ${produtos[i].historicoTransferencias?.map(t => `
-              <li>${t.data}: De ${t.de} para ${t.para} - ${t.detalhes.motivo || t.detalhes.defeito || 'Sem detalhes'}</li>
-            `).join('') || '<li>Nenhum histórico</li>'}
-          </ul>
-          <div class="action-buttons">
-            ${['backup', 'operacao', 'necessario', 'manutencao'].filter(s => s !== produtos[i].status).map(opt => `
-              <button onclick="mostrarModalTransferencia(${i}, '${opt}', 'todos')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
-            `).join('')}
-            <button onclick="excluirProduto(${i}, 'todos')">🗑️</button>
-          </div>
-        </div>
-      </div>
-    `;
+function mostrarDetalhesProduto(produtoId, origem) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Produto não encontrado para ID:", produtoId);
+    alert("Erro: Produto não encontrado.");
+    return;
   }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>Editar Produto: ${produto.nome}</h3>
+      <label>Nome:</label><input id="editNome" type="text" value="${produto.nome}" required><br>
+      <label>Quantidade:</label><input id="editQuantidade" type="number" min="1" value="${produto.quantidade}" required><br>
+      <label>Categoria:</label><input id="editCategoria" type="text" value="${produto.categoria}" required><br>
+      <label>Valor Unitário:</label><input id="editValor" type="number" step="0.01" min="0" value="${produto.valor}" required><br>
+      <label>Status:</label>
+      <select id="editStatus" required>
+        <option value="backup" ${produto.status === 'backup' ? 'selected' : ''}>Backup</option>
+        <option value="operacao" ${produto.status === 'operacao' ? 'selected' : ''}>Operação</option>
+        <option value="necessario" ${produto.status === 'necessario' ? 'selected' : ''}>Necessário OPS</option>
+        <option value="manutencao" ${produto.status === 'manutencao' ? 'selected' : ''}>Manutenção</option>
+      </select><br>
+      <label>Email (opcional):</label><input id="editEmail" type="email" value="${produto.email || ''}"><br>
+      <label>Jogo (opcional):</label><input id="editJogo" type="text" value="${produto.jogo || ''}"><br>
+      ${produto.status === 'manutencao' ? `
+        <label>Defeito:</label><input id="editDefeito" type="text" value="${produto.defeito || ''}"><br>
+        <label>Local de Conserto:</label><input id="editLocalConserto" type="text" value="${produto.localConserto || ''}"><br>
+        <label>Custo de Manutenção:</label><input id="editCustoManutencao" type="number" step="0.01" value="${produto.custoManutencao || 0}"><br>
+        <label>Agendamento (opcional):</label><input id="editAgendamento" type="text" value="${produto.agendamento || ''}"><br>
+      ` : ''}
+      <button id="confirmEditButton">Salvar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const confirmButton = modal.querySelector('#confirmEditButton');
+  confirmButton.addEventListener('click', () => confirmarEditarProduto(produtoId, origem));
 }
 
-function excluirProduto(i, filtroStatus) {
+function confirmarEditarProduto(produtoId, origem) {
+  if (!window.db || !window.firestoreFunctions) {
+    console.error("Firebase não inicializado para edição.");
+    alert("Erro: Firebase não inicializado.");
+    return;
+  }
+
+  const { doc, setDoc } = window.firestoreFunctions;
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Produto não encontrado para ID:", produtoId);
+    alert("Erro: Produto não encontrado.");
+    return;
+  }
+
+  const nome = document.getElementById('editNome')?.value.trim();
+  const quantidade = parseInt(document.getElementById('editQuantidade')?.value || 1);
+  const categoria = document.getElementById('editCategoria')?.value.trim();
+  const valor = parseFloat(document.getElementById('editValor')?.value || 0);
+  const status = document.getElementById('editStatus')?.value;
+  const email = document.getElementById('editEmail')?.value.trim() || '';
+  const jogo = document.getElementById('editJogo')?.value.trim() || '';
+  const defeito = document.getElementById('editDefeito')?.value || '';
+  const localConserto = document.getElementById('editLocalConserto')?.value || '';
+  const custoManutencao = parseFloat(document.getElementById('editCustoManutencao')?.value || 0);
+  const agendamento = document.getElementById('editAgendamento')?.value || '';
+
+  if (!nome || quantidade < 1 || !categoria || valor < 0 || !status) {
+    alert("Por favor, preencha todos os campos obrigatórios corretamente.");
+    return;
+  }
+
+  produto.nome = nome;
+  produto.quantidade = quantidade;
+  produto.categoria = categoria;
+  produto.valor = valor;
+  produto.status = status;
+  produto.email = email;
+  produto.jogo = jogo;
+  if (status === 'manutencao') {
+    produto.defeito = defeito;
+    produto.localConserto = localConserto;
+    produto.custoManutencao = custoManutencao;
+    produto.agendamento = agendamento;
+  } else {
+    produto.defeito = '';
+    produto.localConserto = '';
+    produto.custoManutencao = 0;
+    produto.agendamento = '';
+  }
+
+  console.log("Atualizando produto no Firebase:", produto);
+  setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
+    console.log("Produto atualizado com sucesso no Firebase:", produto.id);
+    document.querySelector('.modal')?.remove();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
+    if (origem === 'categoria-detalhes') {
+      filtrarPorCategoria(produto.categoria, categorias.find(c => c.nome === produto.categoria)?.id || '');
+    } else if (secaoAtiva === 'manutencao' || produto.status === 'manutencao') {
+      carregarManutencao();
+    } else if (['backup', 'operacao', 'necessario', 'todos'].includes(origem)) {
+      listarProdutos(origem);
+    } else {
+      listarProdutosPainel();
+    }
+  }).catch((error) => {
+    console.error("Erro ao editar produto:", error);
+    alert("Falha ao editar produto no Firebase: " + error.message);
+  });
+}
+
+function excluirProduto(produtoId, filtroStatus) {
   if (confirm("Deseja realmente excluir este produto?") && typeof window.db !== 'undefined' && window.db && window.firestoreFunctions) {
     const { doc, deleteDoc } = window.firestoreFunctions;
-    deleteDoc(doc(window.db, "produtos", produtos[i].id)).then(() => {
-      produtos.splice(i, 1);
+    const index = produtos.findIndex(p => p.id === produtoId);
+    if (index === -1) {
+      console.error("Produto não encontrado para ID:", produtoId);
+      alert("Erro: Produto não encontrado.");
+      return;
+    }
+    deleteDoc(doc(window.db, "produtos", produtoId)).then(() => {
+      produtos.splice(index, 1);
       atualizarListas();
-      atualizarDashboard();
-      listarProdutosPainel();
+      atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
       if (filtroStatus === 'categoria') {
-        filtrarPorCategoria(produtos[i]?.categoria, categorias.find(c => c.nome === produtos[i]?.categoria)?.id || '');
+        filtrarPorCategoria(produtos[index]?.categoria, categorias.find(c => c.nome === produtos[index]?.categoria)?.id || '');
       } else if (filtroStatus === 'manutencao') {
         carregarManutencao();
       } else {
@@ -733,16 +922,19 @@ function excluirProduto(i, filtroStatus) {
       }
     }).catch((error) => {
       console.error("Erro ao excluir produto:", error);
-      alert("Falha ao excluir produto do Firebase.");
+      alert("Falha ao excluir produto do Firebase: " + error.message);
     });
   }
 }
 
 function mostrarDetalhesReceita() {
+  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+
   const produtoContagem = {};
   let totalReceita = 0;
 
-  produtos.forEach(p => {
+  produtosFiltrados.forEach(p => {
     produtoContagem[p.nome] = (produtoContagem[p.nome] || 0) + p.quantidade;
     totalReceita += p.quantidade * p.valor;
   });
@@ -751,13 +943,14 @@ function mostrarDetalhesReceita() {
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes da Receita:\nTotal: R$ ${totalReceita.toFixed(2)}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
+  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
 }
 
-function atualizarDashboard() {
-  const totalBackup = produtos.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalOperacao = produtos.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalProdutos = produtos.length;
+function atualizarDashboard(filtroCategoria = '') {
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+  const totalBackup = produtosFiltrados.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalOperacao = produtosFiltrados.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalProdutos = produtosFiltrados.length;
 
   const backupElement = document.querySelector('#secao-painel .stats div:nth-child(1) strong');
   const produtosElement = document.querySelector('#secao-painel .stats div:nth-child(2) strong');
@@ -765,11 +958,11 @@ function atualizarDashboard() {
   const backupCardElement = document.querySelector('#cardBackup p');
   const operacaoCardElement = document.querySelector('#cardOperacao p');
 
-  if (backupElement) backupElement.textContent = totalBackup.toLocaleString();
-  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString();
-  if (receitaElement) receitaElement.textContent = `R$ ${produtos.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
-  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString();
-  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString();
+  if (backupElement) backupElement.textContent = totalBackup.toLocaleString('pt-BR');
+  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString('pt-BR');
+  if (receitaElement) receitaElement.textContent = produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString('pt-BR');
+  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString('pt-BR');
 }
 
 function carregarManutencao() {
@@ -781,20 +974,20 @@ function carregarManutencao() {
 
   produtos
     .filter(p => p.status === 'manutencao')
-    .forEach((p, i) => {
+    .forEach((produto) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${p.nome}</td>
-        <td>${p.defeito || 'N/A'}</td>
-        <td><input type="text" value="${p.localConserto || ''}" onchange="atualizarLocalConserto('${p.id}', this.value)"></td>
-        <td>R$ ${p.custoManutencao.toFixed(2)}</td>
-        <td>${p.agendamento || 'N/A'}</td>
-        <td>${p.email || 'N/A'}</td>
-        <td>${p.jogo || 'N/A'}</td>
+        <td onclick="mostrarDetalhesProduto('${produto.id}', 'manutencao')" style="cursor: pointer;">${produto.nome}</td>
+        <td>${produto.defeito || 'N/A'}</td>
+        <td><input type="text" value="${produto.localConserto || ''}" onchange="atualizarLocalConserto('${produto.id}', this.value)"></td>
+        <td>${produto.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        <td>${produto.agendamento || 'N/A'}</td>
+        <td>${produto.email || 'N/A'}</td>
+        <td>${produto.jogo || 'N/A'}</td>
         <td>
-          <button onclick="mostrarModalTransferencia(${i}, 'operacao', 'manutencao')">🚀 Operação</button>
-          <button onclick="mostrarModalTransferencia(${i}, 'backup', 'manutencao')">📦 Backup</button>
-          <button onclick="mostrarModalTransferencia(${i}, 'necessario', 'manutencao')">🔩 Necessário OPS</button>
+          <button onclick="mostrarModalTransferencia('${produto.id}', 'operacao', 'manutencao')">🚀 Operação</button>
+          <button onclick="mostrarModalTransferencia('${produto.id}', 'backup', 'manutencao')">📦 Backup</button>
+          <button onclick="mostrarModalTransferencia('${produto.id}', 'necessario', 'manutencao')">🔩 Necessário OPS</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -832,3 +1025,6 @@ window.mostrarSecao = mostrarSecao;
 window.excluirCategoria = excluirCategoria;
 window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
 window.atualizarCategoriaProduto = atualizarCategoriaProduto;
+window.voltar = voltar;
+window.exportarParaExcel = exportarParaExcel;
+window.confirmarEditarProduto = confirmarEditarProduto;
