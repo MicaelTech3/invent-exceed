@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -20,7 +20,7 @@
         <li class="nav-item" data-secao="necessario" aria-label="Necessário OPS"><i class="fas fa-wrench"></i>NECESSÁRIO OPS</li>
         <li class="nav-item" data-secao="manutencao" aria-label="Manutenção"><i class="fas fa-tools"></i>MANUTENÇÃO</li>
         <li class="nav-item" data-secao="todos" aria-label="Todos"><i class="fas fa-list"></i>TODOS</li>
-        <li id="toggleDark" style="cursor: pointer;" aria-label="Alternar Modo Escuro"><i>🌙</i> Mudar para Modo Escuro</li>
+        <li id="toggleDark" style="cursor: pointer;" aria-label="Alternar Modo Escuro"><i class="fas fa-moon"></i> Mudar para Modo Escuro</li>
       </ul>
     </aside>
 
@@ -28,7 +28,6 @@
       <section id="secao-painel">
         <div class="profile">
           <img src="perfil.jpeg" alt="Avatar" class="avatar" />
-
           <h3>T.I</h3>
           <p>Proprietário</p>
           <div class="stats">
@@ -41,6 +40,27 @@
           <div id="cardBackup" class="card visits"><p>0</p><span>Unidades (Backup)</span></div>
           <div id="cardOperacao" class="card sales"><p>0</p><span>Unidades (Operação)</span></div>
         </div>
+        <div class="table-section">
+          <div class="table-header">
+            <button class="criar-produto" onclick="mostrarModalCriarProduto('todos')">Criar Produto</button>
+            <button class="delete-category-btn" onclick="mostrarModalExcluirCategoria()">Excluir Categoria</button>
+          </div>
+          <table id="tabelaProdutosPainel">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
       <section id="secao-categorias" style="display: none;">
         <div class="overview">
@@ -51,11 +71,43 @@
           <div id="categoriasContainer" class="categorias-container"></div>
         </div>
       </section>
+      <section id="secao-categoria-detalhes" style="display: none;">
+        <div class="table-section">
+          <h3>Detalhes da Categoria</h3>
+          <table id="tabelaProdutosCategoria">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Local de Conserto</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
       <section id="secao-backup" style="display: none;">
         <div class="table-section">
           <h3>Produtos em Backup</h3>
           <table id="tabelaProdutosBackup">
-            <tr><th>Nome</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </section>
@@ -63,7 +115,19 @@
         <div class="table-section">
           <h3>Produtos em Operação</h3>
           <table id="tabelaProdutosOperacao">
-            <tr><th>Nome</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </section>
@@ -71,7 +135,19 @@
         <div class="table-section">
           <h3>Produtos em Necessário OPS</h3>
           <table id="tabelaProdutosNecessario">
-            <tr><th>Nome</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </section>
@@ -79,7 +155,19 @@
         <div class="table-section">
           <h3>Produtos em Manutenção</h3>
           <table id="tabelaProdutosManutencao">
-            <tr><th>Nome</th><th>Defeito</th><th>Local de Conserto</th><th>Custo</th><th>Agendamento</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Defeito</th>
+                <th>Local de Conserto</th>
+                <th>Custo</th>
+                <th>Agendamento</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </section>
@@ -87,19 +175,25 @@
         <div class="table-section">
           <h3>Todos os Produtos</h3>
           <table id="tabelaProdutosTodos">
-            <tr><th>Nome</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Jogo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </section>
-      <section id="secao-categoria-detalhes" style="display: none;">
-        <div class="table-section">
-          <h3>Detalhes da Categoria</h3>
-          <table id="tabelaProdutosCategoria">
-            <tr><th>Nome</th><th>Qtd</th><th>Valor</th><th>Status</th><th>Local de Conserto</th><th>Email</th><th>Jogo</th><th>Ações</th></tr>
-          </table>
-        </div>
-      </section>
-       <script type="module">
+    </main>
+  </div>
+  <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import {
       getFirestore,
@@ -166,10 +260,7 @@
       console.error("Erro ao inicializar Firebase:", error);
       alert("Erro ao iniciar Firebase: " + error.message);
     }
-
- import './script.js'; 
- </script>
-    </main>
-  </div>
+  </script>
+  <script src="script.js"></script>
 </body>
 </html>
