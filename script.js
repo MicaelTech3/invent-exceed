@@ -36,6 +36,24 @@ window.onload = () => {
     });
   });
 
+  // Configurar o evento onchange para o filtro de categoria
+  const filtroCategoria = document.getElementById('filtroCategoria');
+  if (filtroCategoria) {
+    filtroCategoria.onchange = (e) => {
+      const valorFiltro = e.target.value;
+      localStorage.setItem('filtroCategoria', valorFiltro); // Salvar o filtro
+      console.log("Filtro alterado para:", valorFiltro); // Depuração
+      atualizarDashboard(valorFiltro);
+    };
+
+    // Restaurar o filtro salvo ao carregar a página
+    const filtroSalvo = localStorage.getItem('filtroCategoria') || '';
+    if (filtroSalvo && filtroCategoria.options) {
+      filtroCategoria.value = filtroSalvo;
+      console.log("Filtro restaurado de localStorage:", filtroSalvo); // Depuração
+    }
+  }
+
   if (typeof window.db !== 'undefined' && window.db && window.firestoreFunctions && window.storageFunctions) {
     carregarProdutosFirestore();
     carregarCategorias();
@@ -94,8 +112,8 @@ function mostrarSecao(secao) {
   }
 
   if (secao === 'painel') {
-    atualizarDashboard('');
-    listarProdutosPainel();
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
   }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
@@ -206,7 +224,8 @@ function confirmarCriarCategoria() {
       alert("Categoria criada com sucesso!");
       document.querySelector('.modal')?.remove();
       carregarCategorias();
-      listarProdutosPainel();
+      const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+      listarProdutosPainel(filtroCategoria);
       atualizarFiltroCategoria();
     })
     .catch(error => {
@@ -243,7 +262,8 @@ function carregarCategorias() {
       container.appendChild(newCard);
     });
     atualizarFiltroCategoria();
-    listarProdutosPainel();
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    listarProdutosPainel(filtroCategoria);
   }).catch(error => {
     console.error("Erro ao carregar categorias:", error);
     alert("Falha ao carregar categorias do Firebase.");
@@ -253,11 +273,13 @@ function carregarCategorias() {
 function atualizarFiltroCategoria() {
   const filtroCategoria = document.getElementById('filtroCategoria');
   if (!filtroCategoria) return;
+  const valorSalvo = localStorage.getItem('filtroCategoria') || '';
   filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
   categorias.forEach(c => {
     const option = document.createElement('option');
     option.value = c.nome;
     option.textContent = c.nome;
+    if (c.nome === valorSalvo) option.selected = true; // Restaurar o valor salvo
     filtroCategoria.appendChild(option);
   });
 }
@@ -389,7 +411,8 @@ function excluirCategoria(categoriaId, nomeCategoria) {
             alert("Categoria excluída com sucesso! Produtos associados agora estão sem categoria.");
             document.querySelector('.modal')?.remove();
             carregarCategorias();
-            listarProdutosPainel();
+            const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+            listarProdutosPainel(filtroCategoria);
             atualizarFiltroCategoria();
             const secao = document.getElementById("secao-categoria-detalhes");
             if (secao) secao.style.display = "none";
@@ -486,7 +509,8 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
   Promise.all(createPromises).then(newProducts => {
     newProducts.forEach(produto => produtos.push(produto));
     document.querySelector('.modal')?.remove();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
 
     const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
     if (secaoAtiva === 'categoria-detalhes' && categoriaPreenchida === novoProduto.categoria) {
@@ -496,7 +520,7 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
     } else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva) && novoProduto.status === status) {
       listarProdutos(status);
     } else if (secaoAtiva === 'painel') {
-      listarProdutosPainel();
+      listarProdutosPainel(filtroCategoria);
     }
   }).catch(error => {
     console.error("Erro ao criar produtos:", error);
@@ -517,8 +541,8 @@ function carregarProdutosFirestore() {
       produtos.push({ id: doc.id, ...doc.data() });
     });
     atualizarListas();
-    atualizarDashboard('');
-    listarProdutosPainel();
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
   }).catch((error) => {
     console.error("Erro ao carregar produtos:", error);
     alert("Erro ao carregar produtos do Firebase.");
@@ -532,22 +556,32 @@ function atualizarProdutoFirestore(produto) {
     const index = produtos.findIndex(p => p.id === produto.id);
     if (index !== -1) produtos[index] = produto;
     atualizarListas();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
-    listarProdutosPainel();
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
   }).catch((error) => {
     console.error("Erro ao atualizar produto:", error);
     alert("Falha ao atualizar produto no Firebase.");
   });
 }
 
-function listarProdutosPainel() {
+function listarProdutosPainel(filtroCategoria = '') {
   const tabela = document.getElementById("tabelaProdutosPainel");
   if (!tabela) return;
 
   const tbody = tabela.querySelector('tbody');
   tbody.innerHTML = "";
 
-  produtos.forEach((produto) => {
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+
+  // Depuração: Verificar se há produtos filtrados
+  console.log("Produtos filtrados por categoria", filtroCategoria, produtosFiltrados);
+
+  if (produtosFiltrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8">Nenhum produto encontrado para esta categoria.</td></tr>';
+    return;
+  }
+
+  produtosFiltrados.forEach((produto) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td onclick="mostrarDetalhesProduto('${produto.id}', 'painel')" style="cursor: pointer;">${produto.nome}</td>
@@ -583,9 +617,10 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
     produto.categoria = novaCategoria;
     setDoc(doc(window.db, "produtos", produto.id), produto)
       .then(() => {
-        listarProdutosPainel();
+        const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+        listarProdutosPainel(filtroCategoria);
         atualizarListas();
-        atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+        atualizarDashboard(filtroCategoria);
       })
       .catch(error => {
         console.error("Erro ao atualizar categoria do produto:", error);
@@ -643,7 +678,6 @@ function listarProdutos(filtroStatus) {
   const tbody = tabela.querySelector('tbody');
   tbody.innerHTML = "";
 
-  // Criar ou atualizar o table-header apenas se necessário
   let container = tabela.parentElement.querySelector('.table-header');
   if (!container) {
     container = document.createElement("div");
@@ -662,7 +696,7 @@ function listarProdutos(filtroStatus) {
       searchBar.type = "text";
       searchBar.placeholder = "Pesquisar...";
       searchBar.className = "search-bar";
-      searchBar.id = "searchBarTodos"; // Adicionado ID único
+      searchBar.id = "searchBarTodos";
       const searchIcon = document.createElement("span");
       searchIcon.className = "search-icon";
       searchIcon.innerHTML = "🔍";
@@ -675,7 +709,6 @@ function listarProdutos(filtroStatus) {
     tabela.parentElement.insertBefore(container, tabela);
   }
 
-  // Configurar o evento de pesquisa apenas uma vez
   if (filtroStatus === 'todos') {
     const searchBar = document.getElementById('searchBarTodos');
     if (searchBar && !searchBar.dataset.listenerAdded) {
@@ -793,7 +826,8 @@ function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
   setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
     console.log("Produto atualizado com sucesso no Firebase:", produto.id);
     document.querySelector('.modal')?.remove();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
     const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
     if (filtroStatus === 'categoria') {
       filtrarPorCategoria(produto.categoria, categorias.find(c => c.nome === produto.categoria)?.id || '');
@@ -802,7 +836,7 @@ function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
     } else if (['backup', 'operacao', 'necessario', 'todos'].includes(filtroStatus)) {
       listarProdutos(filtroStatus);
     } else {
-      listarProdutosPainel();
+      listarProdutosPainel(filtroCategoria);
     }
   }).catch((error) => {
     console.error("Erro ao transferir produto:", error);
@@ -907,7 +941,8 @@ function confirmarEditarProduto(produtoId, origem) {
   setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
     console.log("Produto atualizado com sucesso no Firebase:", produto.id);
     document.querySelector('.modal')?.remove();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
     const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
     if (origem === 'categoria-detalhes') {
       filtrarPorCategoria(produto.categoria, categorias.find(c => c.nome === produto.categoria)?.id || '');
@@ -916,7 +951,7 @@ function confirmarEditarProduto(produtoId, origem) {
     } else if (['backup', 'operacao', 'necessario', 'todos'].includes(origem)) {
       listarProdutos(origem);
     } else {
-      listarProdutosPainel();
+      listarProdutosPainel(filtroCategoria);
     }
   }).catch((error) => {
     console.error("Erro ao editar produto:", error);
@@ -936,7 +971,8 @@ function excluirProduto(produtoId, filtroStatus) {
     deleteDoc(doc(window.db, "produtos", produtoId)).then(() => {
       produtos.splice(index, 1);
       atualizarListas();
-      atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+      const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+      atualizarDashboard(filtroCategoria);
       if (filtroStatus === 'categoria') {
         filtrarPorCategoria(produtos[index]?.categoria, categorias.find(c => c.nome === produtos[index]?.categoria)?.id || '');
       } else if (filtroStatus === 'manutencao') {
@@ -987,6 +1023,9 @@ function atualizarDashboard(filtroCategoria = '') {
   if (receitaElement) receitaElement.textContent = produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString('pt-BR');
   if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString('pt-BR');
+
+  // Chama listarProdutosPainel com o mesmo filtroCategoria
+  listarProdutosPainel(filtroCategoria);
 }
 
 function carregarManutencao() {
@@ -1039,9 +1078,11 @@ function atualizarListas() {
     const nomeCategoria = document.querySelector('#secao-categoria-detalhes h3')?.textContent.replace('Detalhes da Categoria: ', '');
     const categoriaId = categorias.find(c => c.nome === nomeCategoria)?.id || '';
     filtrarPorCategoria(nomeCategoria, categoriaId);
-  } else if (secaoAtiva === 'painel') listarProdutosPainel();
+  } else if (secaoAtiva === 'painel') {
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    listarProdutosPainel(filtroCategoria);
+  }
 }
-
 window.confirmarCriarProduto = confirmarCriarProduto;
 window.mostrarModalCriarProduto = mostrarModalCriarProduto;
 window.excluirProduto = excluirProduto;
