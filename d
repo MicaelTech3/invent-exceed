@@ -1,3 +1,55 @@
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INVENT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h1>INVENT</h1>
+      <ul>
+        <li class="nav-item active" data-secao="painel" aria-label="Painel"><i class="fas fa-chart-line"></i>PAINEL</li>
+        <li class="nav-item" data-secao="categorias" aria-label="Categorias"><i class="fas fa-tags"></i>CATEGORIAS</li>
+        <li class="nav-item" data-secao="backup" aria-label="Backup"><i class="fas fa-box"></i>BACKUP</li>
+        <li class="nav-item" data-secao="operacao" aria-label="Operação"><i class="fas fa-rocket"></i>OPERAÇÃO</li>
+        <li class="nav-item" data-secao="necessario" aria-label="Necessário OPS"><i class="fas fa-wrench"></i>NECESSÁRIO OPS</li>
+        <li class="nav-item" data-secao="manutencao" aria-label="Manutenção"><i class="fas fa-tools"></i>MANUTENÇÃO</li>
+        <li class="nav-item" data-secao="todos" aria-label="Todos"><i class="fas fa-list"></i>TODOS</li>
+        <li id="toggleDark" style="cursor: pointer;" aria-label="Alternar Modo Escuro"><i>🌙</i> Mudar para Modo Escuro</li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <section id="secao-painel">
+        <div class="profile">
+          <img src="perfil.jpeg" alt="Avatar" class="avatar" />
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import {

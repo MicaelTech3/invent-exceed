@@ -416,7 +416,7 @@ body.modo-escuro .modal-content select,
 body.modo-escuro .search-bar {
   background: #3e3e4e;
   border-color: #555;
-  color: #f1f1f1;
+  color: #055b81;
 }
 
 body.modo-escuro .search-icon {
@@ -435,7 +435,7 @@ body.modo-escuro .modal {
 }
 
 .categoria-card {
-  background: #ffffff;
+  background: #2d2424;
   border: 1px solid #ddd;
   border-radius: 100px;
   padding: 1rem 1.5rem;
