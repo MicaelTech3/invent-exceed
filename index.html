@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>INVENT.EXCEED</title>
+  <title>INVENT</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
@@ -11,7 +11,7 @@
 <body>
   <div class="container">
     <aside class="sidebar">
-      <h1>EXCEED</h1>
+      <h1>INVENT</h1>
       <ul>
         <li class="nav-item active" data-secao="painel" aria-label="Painel"><i class="fas fa-chart-line"></i>PAINEL</li>
         <li class="nav-item" data-secao="categorias" aria-label="Categorias"><i class="fas fa-tags"></i>CATEGORIAS</li>
@@ -35,15 +35,22 @@
             <div><strong>0</strong><p>Produtos</p></div>
           </div>
         </div>
+        <div class="category-filter">
+          <label for="filtroCategoria">Filtrar por Categoria:</label>
+          <select id="filtroCategoria" onchange="atualizarDashboard(this.value)">
+            <option value="">Todas as Categorias</option>
+          </select>
+        </div>
         <div class="cards">
-          <div id="cardReceita" class="card income"><p>R$ 0.00</p><span>Receita (Total)</span></div>
+          <div id="cardReceita" class="card income"><p>R$ 0.00</p><span>Unidades (Total)</span></div>
           <div id="cardBackup" class="card visits"><p>0</p><span>Unidades (Backup)</span></div>
           <div id="cardOperacao" class="card sales"><p>0</p><span>Unidades (Operação)</span></div>
         </div>
         <div class="table-section">
           <div class="table-header">
-            <button class="criar-produto" onclick="mostrarModalCriarProduto('todos')">Criar Produto</button>
             <button class="delete-category-btn" onclick="mostrarModalExcluirCategoria()">Excluir Categoria</button>
+            <button class="criar-produto" onclick="mostrarModalCriarProduto('todos')">Criar Produto</button>
+            <button class="export-btn" onclick="exportarParaExcel()">Exportar</button>
           </div>
           <table id="tabelaProdutosPainel">
             <thead>
@@ -74,6 +81,10 @@
       <section id="secao-categoria-detalhes" style="display: none;">
         <div class="table-section">
           <h3>Detalhes da Categoria</h3>
+          <div class="table-header">
+            <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
+            <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', document.querySelector('#secao-categoria-detalhes h3').textContent.replace('Detalhes da Categoria: ', ''))">Criar Produto</button>
+          </div>
           <table id="tabelaProdutosCategoria">
             <thead>
               <tr>

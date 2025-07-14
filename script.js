@@ -1,8 +1,8 @@
 /* @ts-nocheck */
 let produtos = [];
-let categorias = []; // Store categories for dropdown
+let categorias = [];
+let navigationHistory = ['painel'];
 
-// Debounce function to limit API calls
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -52,17 +52,17 @@ function alternarModoEscuro() {
   const isDarkMode = corpo.classList.contains('modo-escuro');
   localStorage.setItem('modoEscuro', isDarkMode);
   document.getElementById('toggleDark').innerHTML = isDarkMode 
-    ? '<i>☀️</i> Mudar para Modo Claro' 
-    : '<i>🌙</i> Mudar para Modo Escuro';
+    ? '<i class="fas fa-sun"></i> Mudar para Modo Claro' 
+    : '<i class="fas fa-moon"></i> Mudar para Modo Escuro';
 }
 
 function aplicarModoEscuro() {
   const modoSalvo = localStorage.getItem('modoEscuro') === 'true';
   if (modoSalvo) {
     document.body.classList.add('modo-escuro');
-    document.getElementById('toggleDark').innerHTML = '<i>☀️</i> Mudar para Modo Claro';
+    document.getElementById('toggleDark').innerHTML = '<i class="fas fa-sun"></i> Mudar para Modo Claro';
   } else {
-    document.getElementById('toggleDark').innerHTML = '<i>🌙</i> Mudar para Modo Escuro';
+    document.getElementById('toggleDark').innerHTML = '<i class="fas fa-moon"></i> Mudar para Modo Escuro';
   }
 }
 
@@ -80,6 +80,11 @@ function mostrarSecao(secao) {
   const index = nomes.indexOf(secao);
   if (index >= 0) itens[index].classList.add("active");
 
+  if (!['categoria-detalhes', 'todos'].includes(secao)) {
+    navigationHistory.push(secao);
+    if (navigationHistory.length > 10) navigationHistory.shift();
+  }
+
   if (['backup', 'operacao', 'necessario', 'todos'].includes(secao)) {
     const status = secao === 'operacao' ? 'operacao' :
                    secao === 'necessario' ? 'necessario' :
@@ -88,11 +93,21 @@ function mostrarSecao(secao) {
   }
 
   if (secao === 'painel') {
-    atualizarDashboard();
+    atualizarDashboard('');
     listarProdutosPainel();
   }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
+}
+
+function voltar() {
+  if (navigationHistory.length > 1) {
+    navigationHistory.pop();
+    const previousSection = navigationHistory[navigationHistory.length - 1];
+    mostrarSecao(previousSection);
+  } else {
+    mostrarSecao('painel');
+  }
 }
 
 function mostrarModalCriarCategoria() {
@@ -184,7 +199,8 @@ function confirmarCriarCategoria() {
       alert("Categoria criada com sucesso!");
       document.querySelector('.modal')?.remove();
       carregarCategorias();
-      listarProdutosPainel(); // Update dashboard to include new category in dropdowns
+      listarProdutosPainel();
+      atualizarFiltroCategoria();
     })
     .catch(error => {
       console.error("Erro ao criar categoria:", error);
@@ -219,10 +235,23 @@ function carregarCategorias() {
       newCard.onclick = () => filtrarPorCategoria(data.nome, doc.id);
       container.appendChild(newCard);
     });
-    listarProdutosPainel(); // Update dropdowns with categories
+    atualizarFiltroCategoria();
+    listarProdutosPainel();
   }).catch(error => {
     console.error("Erro ao carregar categorias:", error);
     alert("Falha ao carregar categorias do Firebase.");
+  });
+}
+
+function atualizarFiltroCategoria() {
+  const filtroCategoria = document.getElementById('filtroCategoria');
+  if (!filtroCategoria) return;
+  filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
+  categorias.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c.nome;
+    option.textContent = c.nome;
+    filtroCategoria.appendChild(option);
   });
 }
 
@@ -243,15 +272,31 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   const header = document.createElement("div");
   header.className = "table-header";
   header.innerHTML = `
-    <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
+    <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
     <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Criar Produto</button>
   `;
   tabela.parentElement.insertBefore(header, tabela);
 
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Nome</th>
+      <th>Qtd</th>
+      <th>Valor</th>
+      <th>Status</th>
+      <th>Local de Conserto</th>
+      <th>Email</th>
+      <th>Jogo</th>
+      <th>Ações</th>
+    </tr>
+  `;
+  tabela.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
   produtosFiltrados.forEach((produto, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto(${i}, 'categoria-detalhes')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>R$ ${produto.valor.toFixed(2)}</td>
       <td>${produto.status}</td>
@@ -267,8 +312,9 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
         <button onclick="excluirProduto(${i}, 'categoria')">🗑️</button>
       </td>
     `;
-    tabela.appendChild(tr);
+    tbody.appendChild(tr);
   });
+  tabela.appendChild(tbody);
 
   const actionBar = document.createElement("div");
   actionBar.className = "category-action-bar";
@@ -317,7 +363,6 @@ function excluirCategoria(categoriaId, nomeCategoria) {
     if (!window.db || !window.firestoreFunctions) return;
     const { doc, deleteDoc, collection, getDocs, setDoc } = window.firestoreFunctions;
 
-    // Update products to remove category
     const produtosParaAtualizar = produtos.filter(p => p.categoria === nomeCategoria);
     const updatePromises = produtosParaAtualizar.map(p => {
       p.categoria = '';
@@ -326,7 +371,6 @@ function excluirCategoria(categoriaId, nomeCategoria) {
 
     Promise.all(updatePromises)
       .then(() => {
-        // Delete the category
         deleteDoc(doc(window.db, "categorias", categoriaId))
           .then(() => {
             produtos = produtos.map(p => p.categoria === nomeCategoria ? { ...p, categoria: '' } : p);
@@ -335,6 +379,7 @@ function excluirCategoria(categoriaId, nomeCategoria) {
             document.querySelector('.modal')?.remove();
             carregarCategorias();
             listarProdutosPainel();
+            atualizarFiltroCategoria();
             const secao = document.getElementById("secao-categoria-detalhes");
             if (secao) secao.style.display = "none";
             mostrarSecao('painel');
@@ -415,7 +460,7 @@ function confirmarCriarProduto(status) {
   };
   adicionarProdutoFirestore(novoProduto);
   document.querySelector('.modal')?.remove();
-  atualizarDashboard();
+  atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
 }
 
 function carregarProdutosFirestore() {
@@ -431,7 +476,7 @@ function carregarProdutosFirestore() {
       produtos.push({ id: doc.id, ...doc.data() });
     });
     atualizarListas();
-    atualizarDashboard();
+    atualizarDashboard('');
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao carregar produtos:", error);
@@ -446,7 +491,7 @@ function adicionarProdutoFirestore(produto) {
     produto.id = docRef.id;
     produtos.push(produto);
     atualizarListas();
-    atualizarDashboard();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao adicionar produto:", error);
@@ -461,7 +506,7 @@ function atualizarProdutoFirestore(produto) {
     const index = produtos.findIndex(p => p.id === produto.id);
     if (index !== -1) produtos[index] = produto;
     atualizarListas();
-    atualizarDashboard();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao atualizar produto:", error);
@@ -479,7 +524,7 @@ function listarProdutosPainel() {
   produtos.forEach((produto, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto(${i}, 'painel')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>
         <select onchange="atualizarCategoriaProduto('${produto.id}', this.value)">
@@ -514,12 +559,42 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
       .then(() => {
         listarProdutosPainel();
         atualizarListas();
+        atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
       })
       .catch(error => {
         console.error("Erro ao atualizar categoria do produto:", error);
         alert("Falha ao atualizar categoria do produto.");
       });
   }
+}
+
+function exportarParaExcel() {
+  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+
+  const headers = ['Nome', 'Quantidade', 'Categoria', 'Valor Unitário', 'Status', 'Email', 'Jogo', 'Defeito', 'Local de Conserto', 'Custo', 'Agendamento'];
+  const rows = produtosFiltrados.map(p => [
+    p.nome,
+    p.quantidade,
+    p.categoria || 'N/A',
+    `R$ ${p.valor.toFixed(2)}`,
+    p.status,
+    p.email || 'N/A',
+    p.jogo || 'N/A',
+    p.defeito || 'N/A',
+    p.localConserto || 'N/A',
+    p.custoManutencao ? `R$ ${p.custoManutencao.toFixed(2)}` : 'N/A',
+    p.agendamento || 'N/A'
+  ].map(cell => `"${cell}"`).join('\t'));
+
+  const tsvContent = [headers.join('\t'), ...rows].join('\n');
+  
+  navigator.clipboard.writeText(tsvContent).then(() => {
+    alert("Dados copiados para a área de transferência! Cole em uma planilha (como Excel).");
+  }).catch(error => {
+    console.error("Erro ao copiar dados:", error);
+    alert("Falha ao copiar dados para a área de transferência.");
+  });
 }
 
 function listarProdutos(filtroStatus) {
@@ -530,7 +605,9 @@ function listarProdutos(filtroStatus) {
   const tabela = document.getElementById(tabelaId);
   if (!tabela) return;
 
-  tabela.innerHTML = "";
+  const tbody = tabela.querySelector('tbody');
+  tbody.innerHTML = "";
+
   const existingHeader = tabela.parentElement.querySelector('.table-header');
   if (existingHeader) existingHeader.remove();
 
@@ -570,7 +647,7 @@ function listarProdutos(filtroStatus) {
     const tr = document.createElement("tr");
     const validOptions = ['backup', 'operacao', 'necessario', 'manutencao'].filter(opt => opt !== produto.status);
     tr.innerHTML = `
-      <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;"` : ''}>${produto.nome}</td>
+      <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i}, 'todos')" style="cursor: pointer;"` : ''}>${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>${produto.categoria}</td>
       <td>R$ ${produto.valor.toFixed(2)}</td>
@@ -584,7 +661,7 @@ function listarProdutos(filtroStatus) {
         <button onclick="excluirProduto(${i}, '${filtroStatus}')">🗑️</button>
       </td>
     `;
-    tabela.appendChild(tr);
+    tbody.appendChild(tr);
   });
 }
 
@@ -658,7 +735,7 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
 
   setDoc(doc(window.db, "produtos", produtos[i].id), produtos[i]).then(() => {
     document.querySelector('.modal')?.remove();
-    atualizarDashboard();
+    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
     if (filtroStatus === 'categoria') {
       filtrarPorCategoria(produtos[i].categoria, categorias.find(c => c.nome === produtos[i].categoria)?.id || '');
     } else if (filtroStatus !== 'todos') {
@@ -674,14 +751,14 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
   });
 }
 
-function mostrarDetalhesProduto(i) {
+function mostrarDetalhesProduto(i, origem) {
   const secao = document.getElementById("secao-todos");
   if (secao) {
     secao.style.display = "block";
     document.querySelectorAll("main > section:not(#secao-todos)").forEach(s => s.style.display = "none");
     secao.innerHTML = `
       <div class="table-section">
-        <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
+        <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
         <h3>Detalhes do Produto: ${produtos[i].nome}</h3>
         <div class="product-details">
           <p><strong>Nome:</strong> ${produtos[i].nome}</p>
@@ -721,7 +798,7 @@ function excluirProduto(i, filtroStatus) {
     deleteDoc(doc(window.db, "produtos", produtos[i].id)).then(() => {
       produtos.splice(i, 1);
       atualizarListas();
-      atualizarDashboard();
+      atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
       listarProdutosPainel();
       if (filtroStatus === 'categoria') {
         filtrarPorCategoria(produtos[i]?.categoria, categorias.find(c => c.nome === produtos[i]?.categoria)?.id || '');
@@ -738,10 +815,13 @@ function excluirProduto(i, filtroStatus) {
 }
 
 function mostrarDetalhesReceita() {
+  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+
   const produtoContagem = {};
   let totalReceita = 0;
 
-  produtos.forEach(p => {
+  produtosFiltrados.forEach(p => {
     produtoContagem[p.nome] = (produtoContagem[p.nome] || 0) + p.quantidade;
     totalReceita += p.quantidade * p.valor;
   });
@@ -750,13 +830,14 @@ function mostrarDetalhesReceita() {
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes da Receita:\nTotal: R$ ${totalReceita.toFixed(2)}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
+  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: R$ ${totalReceita.toFixed(2)}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
 }
 
-function atualizarDashboard() {
-  const totalBackup = produtos.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalOperacao = produtos.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalProdutos = produtos.length;
+function atualizarDashboard(filtroCategoria = '') {
+  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+  const totalBackup = produtosFiltrados.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalOperacao = produtosFiltrados.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalProdutos = produtosFiltrados.length;
 
   const backupElement = document.querySelector('#secao-painel .stats div:nth-child(1) strong');
   const produtosElement = document.querySelector('#secao-painel .stats div:nth-child(2) strong');
@@ -766,7 +847,7 @@ function atualizarDashboard() {
 
   if (backupElement) backupElement.textContent = totalBackup.toLocaleString();
   if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString();
-  if (receitaElement) receitaElement.textContent = `R$ ${produtos.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
+  if (receitaElement) receitaElement.textContent = `R$ ${produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
   if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString();
   if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString();
 }
@@ -775,7 +856,9 @@ function carregarManutencao() {
   const tabela = document.getElementById("tabelaProdutosManutencao");
   if (!tabela) return;
 
-  tabela.innerHTML = "";
+  const tbody = tabela.querySelector('tbody');
+  tbody.innerHTML = "";
+
   produtos
     .filter(p => p.status === 'manutencao')
     .forEach((p, i) => {
@@ -794,7 +877,7 @@ function carregarManutencao() {
           <button onclick="mostrarModalTransferencia(${i}, 'necessario', 'manutencao')">🔩 Necessário OPS</button>
         </td>
       `;
-      tabela.appendChild(tr);
+      tbody.appendChild(tr);
     });
 }
 
@@ -829,3 +912,5 @@ window.mostrarSecao = mostrarSecao;
 window.excluirCategoria = excluirCategoria;
 window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
 window.atualizarCategoriaProduto = atualizarCategoriaProduto;
+window.voltar = voltar;
+window.exportarParaExcel = exportarParaExcel;
