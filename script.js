@@ -1,7 +1,6 @@
 /* @ts-nocheck */
 let produtos = [];
 let categorias = [];
-let navigationHistory = ['painel'];
 
 function debounce(func, wait) {
   let timeout;
@@ -80,13 +79,6 @@ function mostrarSecao(secao) {
   const index = nomes.indexOf(secao);
   if (index >= 0) itens[index].classList.add("active");
 
-  // Always add to navigation history, unless it's the current section
-  const currentSection = navigationHistory[navigationHistory.length - 1];
-  if (secao !== currentSection) {
-    navigationHistory.push(secao);
-    if (navigationHistory.length > 10) navigationHistory.shift();
-  }
-
   if (['backup', 'operacao', 'necessario', 'todos'].includes(secao)) {
     const status = secao === 'operacao' ? 'operacao' :
                    secao === 'necessario' ? 'necessario' :
@@ -95,21 +87,11 @@ function mostrarSecao(secao) {
   }
 
   if (secao === 'painel') {
-    atualizarDashboard('');
+    atualizarDashboard();
     listarProdutosPainel();
   }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
-}
-
-function voltar() {
-  if (navigationHistory.length > 1) {
-    navigationHistory.pop(); // Remove current section
-    const previousSection = navigationHistory[navigationHistory.length - 1];
-    mostrarSecao(previousSection);
-  } else {
-    mostrarSecao('painel'); // Fallback to painel if history is empty
-  }
 }
 
 function mostrarModalCriarCategoria() {
@@ -202,7 +184,6 @@ function confirmarCriarCategoria() {
       document.querySelector('.modal')?.remove();
       carregarCategorias();
       listarProdutosPainel();
-      atualizarFiltroCategoria();
     })
     .catch(error => {
       console.error("Erro ao criar categoria:", error);
@@ -237,23 +218,10 @@ function carregarCategorias() {
       newCard.onclick = () => filtrarPorCategoria(data.nome, doc.id);
       container.appendChild(newCard);
     });
-    atualizarFiltroCategoria();
     listarProdutosPainel();
   }).catch(error => {
     console.error("Erro ao carregar categorias:", error);
     alert("Falha ao carregar categorias do Firebase.");
-  });
-}
-
-function atualizarFiltroCategoria() {
-  const filtroCategoria = document.getElementById('filtroCategoria');
-  if (!filtroCategoria) return;
-  filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
-  categorias.forEach(c => {
-    const option = document.createElement('option');
-    option.value = c.nome;
-    option.textContent = c.nome;
-    filtroCategoria.appendChild(option);
   });
 }
 
@@ -274,33 +242,18 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   const header = document.createElement("div");
   header.className = "table-header";
   header.innerHTML = `
-    <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
+    <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
     <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Criar Produto</button>
   `;
   tabela.parentElement.insertBefore(header, tabela);
-
-  const thead = document.createElement("thead");
-  thead.innerHTML = `
-    <tr>
-      <th>Nome</th>
-      <th>Qtd</th>
-      <th>Valor</th>
-      <th>Status</th>
-      <th>Local de Conserto</th>
-      <th>Email</th>
-      <th>Jogo</th>
-      <th>Ações</th>
-    </tr>
-  `;
-  tabela.appendChild(thead);
 
   const tbody = document.createElement("tbody");
   produtosFiltrados.forEach((produto, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i}, 'categoria-detalhes')" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>R$ ${produto.valor.toFixed(2)}</td>
       <td>${produto.status}</td>
       <td>${produto.status === 'manutencao' ? (produto.localConserto || 'N/A') : 'N/A'}</td>
       <td>${produto.email || 'N/A'}</td>
@@ -326,6 +279,9 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   deleteButton.onclick = () => excluirCategoria(categoriaId, nomeCategoria);
   actionBar.appendChild(deleteButton);
   tabela.parentElement.appendChild(actionBar);
+
+  const itens = document.querySelectorAll(".nav-item");
+  itens.forEach(i => i.classList.remove("active"));
 }
 
 function mostrarModalExcluirCategoria() {
@@ -378,7 +334,6 @@ function excluirCategoria(categoriaId, nomeCategoria) {
             document.querySelector('.modal')?.remove();
             carregarCategorias();
             listarProdutosPainel();
-            atualizarFiltroCategoria();
             const secao = document.getElementById("secao-categoria-detalhes");
             if (secao) secao.style.display = "none";
             mostrarSecao('painel');
@@ -459,7 +414,7 @@ function confirmarCriarProduto(status) {
   };
   adicionarProdutoFirestore(novoProduto);
   document.querySelector('.modal')?.remove();
-  atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+  atualizarDashboard();
 }
 
 function carregarProdutosFirestore() {
@@ -475,7 +430,7 @@ function carregarProdutosFirestore() {
       produtos.push({ id: doc.id, ...doc.data() });
     });
     atualizarListas();
-    atualizarDashboard('');
+    atualizarDashboard();
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao carregar produtos:", error);
@@ -490,7 +445,7 @@ function adicionarProdutoFirestore(produto) {
     produto.id = docRef.id;
     produtos.push(produto);
     atualizarListas();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    atualizarDashboard();
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao adicionar produto:", error);
@@ -505,7 +460,7 @@ function atualizarProdutoFirestore(produto) {
     const index = produtos.findIndex(p => p.id === produto.id);
     if (index !== -1) produtos[index] = produto;
     atualizarListas();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    atualizarDashboard();
     listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao atualizar produto:", error);
@@ -523,7 +478,7 @@ function listarProdutosPainel() {
   produtos.forEach((produto, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto(${i}, 'painel')" style="cursor: pointer;">${produto.nome}</td>
+      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>
         <select onchange="atualizarCategoriaProduto('${produto.id}', this.value)">
@@ -531,7 +486,7 @@ function listarProdutosPainel() {
           ${categorias.map(c => `<option value="${c.nome}" ${produto.categoria === c.nome ? 'selected' : ''}>${c.nome}</option>`).join('')}
         </select>
       </td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>R$ ${produto.valor.toFixed(2)}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
@@ -558,42 +513,12 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
       .then(() => {
         listarProdutosPainel();
         atualizarListas();
-        atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
       })
       .catch(error => {
         console.error("Erro ao atualizar categoria do produto:", error);
         alert("Falha ao atualizar categoria do produto.");
       });
   }
-}
-
-function exportarParaExcel() {
-  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
-  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
-
-  const headers = ['Nome', 'Quantidade', 'Categoria', 'Valor Unitário', 'Status', 'Email', 'Jogo', 'Defeito', 'Local de Conserto', 'Custo', 'Agendamento'];
-  const rows = produtosFiltrados.map(p => [
-    p.nome,
-    p.quantidade,
-    p.categoria || 'N/A',
-    p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    p.status,
-    p.email || 'N/A',
-    p.jogo || 'N/A',
-    p.defeito || 'N/A',
-    p.localConserto || 'N/A',
-    p.custoManutencao ? p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'N/A',
-    p.agendamento || 'N/A'
-  ].map(cell => `"${cell}"`).join('\t'));
-
-  const tsvContent = [headers.join('\t'), ...rows].join('\n');
-  
-  navigator.clipboard.writeText(tsvContent).then(() => {
-    alert("Dados copiados para a área de transferência! Cole em uma planilha (como Excel).");
-  }).catch(error => {
-    console.error("Erro ao copiar dados:", error);
-    alert("Falha ao copiar dados para a área de transferência.");
-  });
 }
 
 function listarProdutos(filtroStatus) {
@@ -646,10 +571,10 @@ function listarProdutos(filtroStatus) {
     const tr = document.createElement("tr");
     const validOptions = ['backup', 'operacao', 'necessario', 'manutencao'].filter(opt => opt !== produto.status);
     tr.innerHTML = `
-      <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i}, 'todos')" style="cursor: pointer;"` : ''}>${produto.nome}</td>
+      <td ${filtroStatus === 'todos' ? `onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;"` : ''}>${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>${produto.categoria}</td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>R$ ${produto.valor.toFixed(2)}</td>
       <td>${produto.status}</td>
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
@@ -734,7 +659,7 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
 
   setDoc(doc(window.db, "produtos", produtos[i].id), produtos[i]).then(() => {
     document.querySelector('.modal')?.remove();
-    atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+    atualizarDashboard();
     if (filtroStatus === 'categoria') {
       filtrarPorCategoria(produtos[i].categoria, categorias.find(c => c.nome === produtos[i].categoria)?.id || '');
     } else if (filtroStatus !== 'todos') {
@@ -750,27 +675,27 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
   });
 }
 
-function mostrarDetalhesProduto(i, origem) {
+function mostrarDetalhesProduto(i) {
   const secao = document.getElementById("secao-todos");
   if (secao) {
     secao.style.display = "block";
     document.querySelectorAll("main > section:not(#secao-todos)").forEach(s => s.style.display = "none");
     secao.innerHTML = `
       <div class="table-section">
-        <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
+        <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
         <h3>Detalhes do Produto: ${produtos[i].nome}</h3>
         <div class="product-details">
           <p><strong>Nome:</strong> ${produtos[i].nome}</p>
           <p><strong>Quantidade:</strong> ${produtos[i].quantidade}</p>
           <p><strong>Categoria:</strong> ${produtos[i].categoria || 'N/A'}</p>
-          <p><strong>Valor Unitário:</strong> ${produtos[i].valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+          <p><strong>Valor Unitário:</strong> R$ ${produtos[i].valor.toFixed(2)}</p>
           <p><strong>Status:</strong> ${produtos[i].status}</p>
           <p><strong>Email:</strong> ${produtos[i].email || 'N/A'}</p>
           <p><strong>Jogo:</strong> ${produtos[i].jogo || 'N/A'}</p>
           ${produtos[i].status === 'manutencao' ? `
             <p><strong>Defeito:</strong> ${produtos[i].defeito || 'N/A'}</p>
             <p><strong>Local de Conserto:</strong> ${produtos[i].localConserto || 'N/A'}</p>
-            <p><strong>Custo de Manutenção:</strong> ${produtos[i].custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+            <p><strong>Custo de Manutenção:</strong> R$ ${produtos[i].custoManutencao.toFixed(2)}</p>
             <p><strong>Agendamento:</strong> ${produtos[i].agendamento || 'N/A'}</p>
           ` : ''}
           <p><strong>Histórico de Transferências:</strong></p>
@@ -797,7 +722,7 @@ function excluirProduto(i, filtroStatus) {
     deleteDoc(doc(window.db, "produtos", produtos[i].id)).then(() => {
       produtos.splice(i, 1);
       atualizarListas();
-      atualizarDashboard(document.getElementById('filtroCategoria')?.value || '');
+      atualizarDashboard();
       listarProdutosPainel();
       if (filtroStatus === 'categoria') {
         filtrarPorCategoria(produtos[i]?.categoria, categorias.find(c => c.nome === produtos[i]?.categoria)?.id || '');
@@ -814,13 +739,10 @@ function excluirProduto(i, filtroStatus) {
 }
 
 function mostrarDetalhesReceita() {
-  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
-  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
-
   const produtoContagem = {};
   let totalReceita = 0;
 
-  produtosFiltrados.forEach(p => {
+  produtos.forEach(p => {
     produtoContagem[p.nome] = (produtoContagem[p.nome] || 0) + p.quantidade;
     totalReceita += p.quantidade * p.valor;
   });
@@ -829,14 +751,13 @@ function mostrarDetalhesReceita() {
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
+  alert(`Detalhes da Receita:\nTotal: R$ ${totalReceita.toFixed(2)}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
 }
 
-function atualizarDashboard(filtroCategoria = '') {
-  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
-  const totalBackup = produtosFiltrados.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalOperacao = produtosFiltrados.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
-  const totalProdutos = produtosFiltrados.length;
+function atualizarDashboard() {
+  const totalBackup = produtos.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalOperacao = produtos.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
+  const totalProdutos = produtos.length;
 
   const backupElement = document.querySelector('#secao-painel .stats div:nth-child(1) strong');
   const produtosElement = document.querySelector('#secao-painel .stats div:nth-child(2) strong');
@@ -844,11 +765,11 @@ function atualizarDashboard(filtroCategoria = '') {
   const backupCardElement = document.querySelector('#cardBackup p');
   const operacaoCardElement = document.querySelector('#cardOperacao p');
 
-  if (backupElement) backupElement.textContent = totalBackup.toLocaleString('pt-BR');
-  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString('pt-BR');
-  if (receitaElement) receitaElement.textContent = produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString('pt-BR');
-  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString('pt-BR');
+  if (backupElement) backupElement.textContent = totalBackup.toLocaleString();
+  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString();
+  if (receitaElement) receitaElement.textContent = `R$ ${produtos.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
+  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString();
+  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString();
 }
 
 function carregarManutencao() {
@@ -866,7 +787,7 @@ function carregarManutencao() {
         <td>${p.nome}</td>
         <td>${p.defeito || 'N/A'}</td>
         <td><input type="text" value="${p.localConserto || ''}" onchange="atualizarLocalConserto('${p.id}', this.value)"></td>
-        <td>${p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        <td>R$ ${p.custoManutencao.toFixed(2)}</td>
         <td>${p.agendamento || 'N/A'}</td>
         <td>${p.email || 'N/A'}</td>
         <td>${p.jogo || 'N/A'}</td>
@@ -911,5 +832,3 @@ window.mostrarSecao = mostrarSecao;
 window.excluirCategoria = excluirCategoria;
 window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
 window.atualizarCategoriaProduto = atualizarCategoriaProduto;
-window.voltar = voltar;
-window.exportarParaExcel = exportarParaExcel;

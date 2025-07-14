@@ -42,7 +42,7 @@
           </select>
         </div>
         <div class="cards">
-          <div id="cardReceita" class="card income"><p>R$ 0.00</p><span>Unidades (Total)</span></div>
+          <div id="cardReceita" class="card income"><p>R$ 0,00</p><span>Unidades (Total)</span></div>
           <div id="cardBackup" class="card visits"><p>0</p><span>Unidades (Backup)</span></div>
           <div id="cardOperacao" class="card sales"><p>0</p><span>Unidades (Operação)</span></div>
         </div>
@@ -205,7 +205,7 @@
     </main>
   </div>
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+ import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import {
       getFirestore,
       collection,
@@ -271,6 +271,8 @@
       console.error("Erro ao inicializar Firebase:", error);
       alert("Erro ao iniciar Firebase: " + error.message);
     }
+
+ import './script.js';
   </script>
   <script src="script.js"></script>
 </body>
