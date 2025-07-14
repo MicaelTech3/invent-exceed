@@ -342,7 +342,8 @@ td button:hover {
   font-weight: 500;
 }
 
-.modal-content input {
+.modal-content input,
+.modal-content select {
   width: 100%;
   padding: 8px;
   margin-bottom: 1rem;
@@ -411,6 +412,7 @@ body.modo-escuro .modal-content {
 }
 
 body.modo-escuro .modal-content input,
+body.modo-escuro .modal-content select,
 body.modo-escuro .search-bar {
   background: #3e3e4e;
   border-color: #555;
@@ -432,7 +434,7 @@ body.modo-escuro .modal {
   margin: 1rem 0;
 }
 
-.categorias-container .categoria-card {
+.categoria-card {
   background: #ffffff;
   border: 1px solid #ddd;
   border-radius: 100px;
@@ -444,14 +446,13 @@ body.modo-escuro .modal {
   transition: transform 0.2s;
 }
 
-.categorias-container .categoria-card:hover {
+.categoria-card:hover {
   transform: scale(1.05);
 }
 
-.categoria-card img {
+.categoria-icon {
   width: 48px;
   height: 48px;
-  object-fit: cover;
   border-radius: 50%;
   margin-right: 1rem;
 }
@@ -476,4 +477,60 @@ body.modo-escuro .modal {
 
 .category-create-btn:hover {
   background: #1565c0;
+}
+
+.category-action-bar {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.delete-category-btn {
+  padding: 10px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.delete-category-btn:hover {
+  background: #d32f2f;
+}
+
+.icon-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 10px;
+  margin: 1rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.icon-option {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.icon-option:hover {
+  background: #f0f0f0;
+}
+
+.icon-preview {
+  width: 32px;
+  height: 32px;
+}
+
+.icon-preview.selected {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #1e90ff;
+  border-radius: 50%;
 }

@@ -1,15 +1,37 @@
+/* @ts-nocheck */
 let produtos = [];
+let categorias = []; // Store categories for dropdown
+
+// Debounce function to limit API calls
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
 
 window.onload = () => {
   aplicarModoEscuro();
+
+  const toggleDark = document.getElementById('toggleDark');
+  const cardReceita = document.getElementById('cardReceita');
+  const btnCriarCategoria = document.getElementById('btnCriarCategoria');
+  
+  toggleDark.replaceWith(toggleDark.cloneNode(true));
+  cardReceita.replaceWith(cardReceita.cloneNode(true));
+  btnCriarCategoria.replaceWith(btnCriarCategoria.cloneNode(true));
+
   document.getElementById('toggleDark').addEventListener('click', alternarModoEscuro);
   document.getElementById('cardReceita').addEventListener('click', mostrarDetalhesReceita);
   document.getElementById('btnCriarCategoria').addEventListener('click', () => mostrarModalCriarCategoria());
 
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const secao = item.getAttribute('data-secao');
+    const newItem = item.cloneNode(true);
+    item.replaceWith(newItem);
+    newItem.addEventListener('click', () => {
+      const secao = newItem.getAttribute('data-secao');
       mostrarSecao(secao);
     });
   });
@@ -65,7 +87,10 @@ function mostrarSecao(secao) {
     listarProdutos(status);
   }
 
-  if (secao === 'painel') atualizarDashboard();
+  if (secao === 'painel') {
+    atualizarDashboard();
+    listarProdutosPainel();
+  }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
 }
@@ -77,8 +102,11 @@ function mostrarModalCriarCategoria() {
     <div class="modal-content">
       <h3>Criar Nova Categoria</h3>
       <label>Nome:</label><input id="nomeCategoria" type="text" required><br>
-      <label>Ícone (URL):</label><input id="iconUrl" type="text" placeholder="https://exemplo.com/icone.png"><br>
-      <label>Ícone (Arquivo PNG):</label><input id="iconFile" type="file" accept="image/png"><br>
+      <label>Responsável:</label><input id="responsavel" type="text" required><br>
+      <label>Ícone:</label>
+      <input id="iconSearch" type="text" placeholder="Pesquisar ícones...">
+      <div id="iconResults" class="icon-results"></div>
+      <input id="iconUrl" type="hidden">
       <button id="confirmCategoriaButton">Confirmar</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
@@ -87,51 +115,76 @@ function mostrarModalCriarCategoria() {
 
   const confirmButton = modal.querySelector('#confirmCategoriaButton');
   confirmButton.addEventListener('click', confirmarCriarCategoria);
+
+  const iconSearch = modal.querySelector('#iconSearch');
+  iconSearch.addEventListener('input', debounce((e) => buscarIcones(e.target.value), 300));
+}
+
+async function buscarIcones(query) {
+  const resultsContainer = document.getElementById('iconResults');
+  if (!resultsContainer) return;
+  resultsContainer.innerHTML = 'Carregando...';
+
+  try {
+    const response = await fetch(`https://api.iconify.design/search?query=${encodeURIComponent(query)}&limit=12`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    resultsContainer.innerHTML = '';
+
+    if (data.icons && data.icons.length > 0) {
+      data.icons.forEach(icon => {
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'icon-option';
+        iconDiv.innerHTML = `<img src="https://api.iconify.design/${icon}.svg?width=32&height=32" class="icon-preview" alt="${icon}">`;
+        iconDiv.onclick = () => selecionarIcone(`https://api.iconify.design/${icon}.svg`, icon);
+        resultsContainer.appendChild(iconDiv);
+      });
+    } else {
+      resultsContainer.innerHTML = '<div>Nenhum ícone encontrado. Tente outro termo.</div>';
+    }
+  } catch (error) {
+    console.error('Erro ao buscar ícones:', error);
+    resultsContainer.innerHTML = '<div>Erro ao carregar ícones. Tente novamente.</div>';
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'icon-option';
+    iconDiv.innerHTML = `<img src="https://api.iconify.design/mdi:help-circle.svg?width=32&height=32" class="icon-preview" alt="fallback-icon">`;
+    iconDiv.onclick = () => selecionarIcone('https://api.iconify.design/mdi:help-circle.svg', 'mdi:help-circle');
+    resultsContainer.appendChild(iconDiv);
+  }
+}
+
+function selecionarIcone(url, iconName) {
+  const iconUrlInput = document.getElementById('iconUrl');
+  const resultsContainer = document.getElementById('iconResults');
+  if (iconUrlInput && resultsContainer) {
+    iconUrlInput.value = url;
+    resultsContainer.innerHTML = `<img src="${url}?width=48&height=48" class="icon-preview selected" alt="${iconName}">`;
+  }
 }
 
 function confirmarCriarCategoria() {
-  const nome = document.getElementById('nomeCategoria').value.trim();
-  const iconUrl = document.getElementById('iconUrl').value.trim();
-  const iconFile = document.getElementById('iconFile').files[0];
+  const nome = document.getElementById('nomeCategoria')?.value.trim();
+  const responsavel = document.getElementById('responsavel')?.value.trim();
+  const iconUrl = document.getElementById('iconUrl')?.value.trim();
 
-  if (!nome) {
-    alert("Por favor, preencha o nome da categoria.");
+  if (!nome || !responsavel) {
+    alert("Por favor, preencha o nome e o responsável da categoria.");
     return;
   }
 
-  if (!iconUrl && !iconFile) {
-    alert("Por favor, forneça um ícone (URL ou arquivo PNG).");
+  if (!iconUrl) {
+    alert("Por favor, selecione um ícone para a categoria.");
     return;
   }
 
   const { collection, addDoc } = window.firestoreFunctions;
-  const { ref, uploadBytes, getDownloadURL } = window.storageFunctions;
-
-  addDoc(collection(window.db, "categorias"), { nome, local: '', responsavel: '' })
+  addDoc(collection(window.db, "categorias"), { nome, responsavel, icon: iconUrl })
     .then(docRef => {
-      const categoriaId = docRef.id;
-      let uploadPromise = Promise.resolve(iconUrl);
-
-      if (iconFile) {
-        const storageRef = ref(window.storage, `categorias/${categoriaId}/icones/${iconFile.name}`);
-        uploadPromise = uploadBytes(storageRef, iconFile).then(snapshot => {
-          return getDownloadURL(snapshot.ref);
-        });
-      }
-
-      uploadPromise.then(icon => {
-        if (icon) {
-          const categoriaRef = doc(window.db, "categorias", categoriaId);
-          return setDoc(categoriaRef, { nome, local: '', responsavel: '', icon }, { merge: true });
-        }
-      }).then(() => {
-        alert("Categoria criada com sucesso!");
-        document.querySelector('.modal').remove();
-        carregarCategorias();
-      }).catch(error => {
-        console.error("Erro ao salvar ícone ou categoria:", error);
-        alert("Falha ao salvar ícone ou categoria no Firebase.");
-      });
+      categorias.push({ id: docRef.id, nome, responsavel, icon: iconUrl });
+      alert("Categoria criada com sucesso!");
+      document.querySelector('.modal')?.remove();
+      carregarCategorias();
+      listarProdutosPainel(); // Update dashboard to include new category in dropdowns
     })
     .catch(error => {
       console.error("Erro ao criar categoria:", error);
@@ -142,27 +195,38 @@ function confirmarCriarCategoria() {
 function carregarCategorias() {
   const { collection, getDocs } = window.firestoreFunctions;
   const container = document.getElementById("categoriasContainer");
+  if (!container) return;
+
   container.innerHTML = "";
 
   getDocs(collection(window.db, "categorias")).then(snapshot => {
+    container.innerHTML = "";
+    categorias = [];
     snapshot.forEach(doc => {
       const data = doc.data();
+      categorias.push({ id: doc.id, ...data });
       const card = document.createElement("div");
       card.className = "categoria-card";
       card.innerHTML = `
-        <img src="${data.icon || 'https://placehold.co/48x48'}" alt="Ícone de ${data.nome}">
+        <img src="${data.icon || 'https://api.iconify.design/mdi:help-circle.svg'}?width=48&height=48" class="categoria-icon" alt="${data.nome}">
         <div>
           <strong>${data.nome}</strong><br>
-          <small>${data.local || 'N/A'} • ${data.responsavel || 'N/A'}</small>
+          <small>Responsável: ${data.responsavel || 'N/A'}</small>
         </div>
       `;
-      card.onclick = () => filtrarPorCategoria(data.nome);
-      container.appendChild(card);
+      const newCard = card.cloneNode(true);
+      card.replaceWith(newCard);
+      newCard.onclick = () => filtrarPorCategoria(data.nome, doc.id);
+      container.appendChild(newCard);
     });
+    listarProdutosPainel(); // Update dropdowns with categories
+  }).catch(error => {
+    console.error("Erro ao carregar categorias:", error);
+    alert("Falha ao carregar categorias do Firebase.");
   });
 }
 
-function filtrarPorCategoria(nomeCategoria) {
+function filtrarPorCategoria(nomeCategoria, categoriaId) {
   const produtosFiltrados = produtos.filter(p => p.categoria === nomeCategoria);
   const secao = document.getElementById("secao-categoria-detalhes");
   secao.style.display = "block";
@@ -171,9 +235,17 @@ function filtrarPorCategoria(nomeCategoria) {
   const tabela = document.getElementById("tabelaProdutosCategoria");
   tabela.innerHTML = "";
 
+  const existingHeader = tabela.parentElement.querySelector('.table-header');
+  if (existingHeader) existingHeader.remove();
+  const existingActionBar = tabela.parentElement.querySelector('.category-action-bar');
+  if (existingActionBar) existingActionBar.remove();
+
   const header = document.createElement("div");
   header.className = "table-header";
-  header.innerHTML = `<button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>`;
+  header.innerHTML = `
+    <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
+    <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Criar Produto</button>
+  `;
   tabela.parentElement.insertBefore(header, tabela);
 
   produtosFiltrados.forEach((produto, i) => {
@@ -198,11 +270,88 @@ function filtrarPorCategoria(nomeCategoria) {
     tabela.appendChild(tr);
   });
 
+  const actionBar = document.createElement("div");
+  actionBar.className = "category-action-bar";
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "delete-category-btn";
+  deleteButton.textContent = "Excluir Categoria";
+  deleteButton.onclick = () => excluirCategoria(categoriaId, nomeCategoria);
+  actionBar.appendChild(deleteButton);
+  tabela.parentElement.appendChild(actionBar);
+
   const itens = document.querySelectorAll(".nav-item");
   itens.forEach(i => i.classList.remove("active"));
 }
 
-function mostrarModalCriarProduto(status) {
+function mostrarModalExcluirCategoria() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>Excluir Categoria</h3>
+      <label>Selecione a Categoria:</label>
+      <select id="categoriaExcluir" required>
+        <option value="">Selecione uma categoria</option>
+        ${categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')}
+      </select><br>
+      <button id="confirmExcluirCategoria">Confirmar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const confirmButton = modal.querySelector('#confirmExcluirCategoria');
+  confirmButton.addEventListener('click', () => {
+    const categoriaId = document.getElementById('categoriaExcluir')?.value;
+    const categoria = categorias.find(c => c.id === categoriaId);
+    if (!categoriaId || !categoria) {
+      alert("Por favor, selecione uma categoria.");
+      return;
+    }
+    excluirCategoria(categoriaId, categoria.nome);
+  });
+}
+
+function excluirCategoria(categoriaId, nomeCategoria) {
+  if (confirm(`Deseja realmente excluir a categoria "${nomeCategoria}"? Os produtos associados permanecerão, mas sem categoria.`)) {
+    if (!window.db || !window.firestoreFunctions) return;
+    const { doc, deleteDoc, collection, getDocs, setDoc } = window.firestoreFunctions;
+
+    // Update products to remove category
+    const produtosParaAtualizar = produtos.filter(p => p.categoria === nomeCategoria);
+    const updatePromises = produtosParaAtualizar.map(p => {
+      p.categoria = '';
+      return setDoc(doc(window.db, "produtos", p.id), p);
+    });
+
+    Promise.all(updatePromises)
+      .then(() => {
+        // Delete the category
+        deleteDoc(doc(window.db, "categorias", categoriaId))
+          .then(() => {
+            produtos = produtos.map(p => p.categoria === nomeCategoria ? { ...p, categoria: '' } : p);
+            categorias = categorias.filter(c => c.id !== categoriaId);
+            alert("Categoria excluída com sucesso! Produtos associados agora estão sem categoria.");
+            document.querySelector('.modal')?.remove();
+            carregarCategorias();
+            listarProdutosPainel();
+            const secao = document.getElementById("secao-categoria-detalhes");
+            if (secao) secao.style.display = "none";
+            mostrarSecao('painel');
+          })
+          .catch(error => {
+            console.error("Erro ao excluir categoria:", error);
+            alert("Falha ao excluir categoria.");
+          });
+      })
+      .catch(error => {
+        console.error("Erro ao atualizar produtos:", error);
+        alert("Falha ao atualizar produtos associados.");
+      });
+  }
+}
+
+function mostrarModalCriarProduto(status, categoriaPreenchida = '') {
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
@@ -210,10 +359,17 @@ function mostrarModalCriarProduto(status) {
       <h3>Criar Novo Produto</h3>
       <label>Nome:</label><input id="nome" type="text" required><br>
       <label>Quantidade:</label><input id="quantidade" type="number" min="0" required><br>
-      <label>Categoria:</label><input id="categoria" type="text" required><br>
+      <label>Categoria:</label><input id="categoria" type="text" value="${categoriaPreenchida}" required><br>
       <label>Valor Unitário:</label><input id="valor" type="number" step="0.01" min="0" required><br>
-      <label>Email:</label><input id="email" type="email"><br>
-      <label>Jogo:</label><input id="jogo" type="text"><br>
+      <label>Status:</label>
+      <select id="status" required>
+        <option value="backup">Backup</option>
+        <option value="operacao">Operação</option>
+        <option value="necessario">Necessário OPS</option>
+        <option value="manutencao">Manutenção</option>
+      </select><br>
+      <label>Email (opcional):</label><input id="email" type="email"><br>
+      <label>Jogo (opcional):</label><input id="jogo" type="text"><br>
       <button id="confirmButton">Confirmar</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
@@ -225,14 +381,15 @@ function mostrarModalCriarProduto(status) {
 }
 
 function confirmarCriarProduto(status) {
-  const nome = document.getElementById('nome').value.trim();
-  const quantidade = parseInt(document.getElementById('quantidade').value || 0);
-  const categoria = document.getElementById('categoria').value.trim();
-  const valor = parseFloat(document.getElementById('valor').value || 0);
-  const email = document.getElementById('email').value.trim() || '';
-  const jogo = document.getElementById('jogo').value.trim() || '';
+  const nome = document.getElementById('nome')?.value.trim();
+  const quantidade = parseInt(document.getElementById('quantidade')?.value || 0);
+  const categoria = document.getElementById('categoria')?.value.trim();
+  const valor = parseFloat(document.getElementById('valor')?.value || 0);
+  const selectedStatus = document.getElementById('status')?.value;
+  const email = document.getElementById('email')?.value.trim() || '';
+  const jogo = document.getElementById('jogo')?.value.trim() || '';
 
-  if (!nome || quantidade < 0 || !categoria || valor < 0) {
+  if (!nome || quantidade < 0 || !categoria || valor < 0 || !selectedStatus) {
     alert("Por favor, preencha todos os campos obrigatórios corretamente.");
     return;
   }
@@ -247,17 +404,17 @@ function confirmarCriarProduto(status) {
     quantidade,
     categoria,
     valor,
-    status: status === 'todos' || status === 'categoria' ? 'backup' : status,
+    status: selectedStatus,
     email,
     jogo,
-    defeito: "",
-    localConserto: "",
-    custoManutencao: 0,
-    agendamento: "",
+    defeito: selectedStatus === 'manutencao' ? '' : '',
+    localConserto: selectedStatus === 'manutencao' ? '' : '',
+    custoManutencao: selectedStatus === 'manutencao' ? 0 : 0,
+    agendamento: selectedStatus === 'manutencao' ? '' : '',
     historicoTransferencias: []
   };
   adicionarProdutoFirestore(novoProduto);
-  document.querySelector('.modal').remove();
+  document.querySelector('.modal')?.remove();
   atualizarDashboard();
 }
 
@@ -275,6 +432,7 @@ function carregarProdutosFirestore() {
     });
     atualizarListas();
     atualizarDashboard();
+    listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao carregar produtos:", error);
     alert("Erro ao carregar produtos do Firebase.");
@@ -289,6 +447,7 @@ function adicionarProdutoFirestore(produto) {
     produtos.push(produto);
     atualizarListas();
     atualizarDashboard();
+    listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao adicionar produto:", error);
     alert("Falha ao adicionar produto ao Firebase.");
@@ -303,10 +462,64 @@ function atualizarProdutoFirestore(produto) {
     if (index !== -1) produtos[index] = produto;
     atualizarListas();
     atualizarDashboard();
+    listarProdutosPainel();
   }).catch((error) => {
     console.error("Erro ao atualizar produto:", error);
     alert("Falha ao atualizar produto no Firebase.");
   });
+}
+
+function listarProdutosPainel() {
+  const tabela = document.getElementById("tabelaProdutosPainel");
+  if (!tabela) return;
+
+  const tbody = tabela.querySelector('tbody');
+  tbody.innerHTML = "";
+
+  produtos.forEach((produto, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td onclick="mostrarDetalhesProduto(${i})" style="cursor: pointer;">${produto.nome}</td>
+      <td>${produto.quantidade}</td>
+      <td>
+        <select onchange="atualizarCategoriaProduto('${produto.id}', this.value)">
+          <option value="">Sem categoria</option>
+          ${categorias.map(c => `<option value="${c.nome}" ${produto.categoria === c.nome ? 'selected' : ''}>${c.nome}</option>`).join('')}
+        </select>
+      </td>
+      <td>R$ ${produto.valor.toFixed(2)}</td>
+      <td>${produto.status}</td>
+      <td>${produto.email || 'N/A'}</td>
+      <td>${produto.jogo || 'N/A'}</td>
+      <td>
+        ${['backup', 'operacao', 'necessario', 'manutencao']
+          .filter(opt => opt !== produto.status)
+          .map(opt => `
+            <button onclick="mostrarModalTransferencia(${i}, '${opt}', 'todos')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
+          `).join('')}
+        <button onclick="excluirProduto(${i}, 'todos')">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function atualizarCategoriaProduto(produtoId, novaCategoria) {
+  if (!window.db || !window.firestoreFunctions) return;
+  const { doc, setDoc } = window.firestoreFunctions;
+  const produto = produtos.find(p => p.id === produtoId);
+  if (produto) {
+    produto.categoria = novaCategoria;
+    setDoc(doc(window.db, "produtos", produto.id), produto)
+      .then(() => {
+        listarProdutosPainel();
+        atualizarListas();
+      })
+      .catch(error => {
+        console.error("Erro ao atualizar categoria do produto:", error);
+        alert("Falha ao atualizar categoria do produto.");
+      });
+  }
 }
 
 function listarProdutos(filtroStatus) {
@@ -412,12 +625,12 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
   const { doc, setDoc } = window.firestoreFunctions;
   let detalhes = {};
   if (novoStatus === 'manutencao') {
-    detalhes.defeito = document.getElementById('defeito').value || "";
-    detalhes.localConserto = document.getElementById('localConserto').value || "";
-    detalhes.custoManutencao = parseFloat(document.getElementById('custoManutencao').value || 0);
-    detalhes.agendamento = document.getElementById('agendamento').value || "";
+    detalhes.defeito = document.getElementById('defeito')?.value || "";
+    detalhes.localConserto = document.getElementById('localConserto')?.value || "";
+    detalhes.custoManutencao = parseFloat(document.getElementById('custoManutencao')?.value || 0);
+    detalhes.agendamento = document.getElementById('agendamento')?.value || "";
   } else {
-    detalhes.motivo = document.getElementById('motivo').value || "";
+    detalhes.motivo = document.getElementById('motivo')?.value || "";
   }
 
   const statusAtual = produtos[i].status;
@@ -444,15 +657,16 @@ function confirmarTransferencia(i, novoStatus, filtroStatus) {
   });
 
   setDoc(doc(window.db, "produtos", produtos[i].id), produtos[i]).then(() => {
-    document.querySelector('.modal').remove();
+    document.querySelector('.modal')?.remove();
     atualizarDashboard();
     if (filtroStatus === 'categoria') {
-      filtrarPorCategoria(produtos[i].categoria);
+      filtrarPorCategoria(produtos[i].categoria, categorias.find(c => c.nome === produtos[i].categoria)?.id || '');
     } else if (filtroStatus !== 'todos') {
       listarProdutos(filtroStatus);
       if (novoStatus === 'manutencao') carregarManutencao();
     } else {
       listarProdutos(filtroStatus);
+      listarProdutosPainel();
     }
   }).catch((error) => {
     console.error("Erro ao transferir produto:", error);
@@ -467,12 +681,12 @@ function mostrarDetalhesProduto(i) {
     document.querySelectorAll("main > section:not(#secao-todos)").forEach(s => s.style.display = "none");
     secao.innerHTML = `
       <div class="table-section">
-        <button class="back-button" onclick="mostrarSecao('todos')">⬅️ Voltar</button>
+        <button class="back-button" onclick="mostrarSecao('painel')">⬅️ Voltar</button>
         <h3>Detalhes do Produto: ${produtos[i].nome}</h3>
         <div class="product-details">
           <p><strong>Nome:</strong> ${produtos[i].nome}</p>
           <p><strong>Quantidade:</strong> ${produtos[i].quantidade}</p>
-          <p><strong>Categoria:</strong> ${produtos[i].categoria}</p>
+          <p><strong>Categoria:</strong> ${produtos[i].categoria || 'N/A'}</p>
           <p><strong>Valor Unitário:</strong> R$ ${produtos[i].valor.toFixed(2)}</p>
           <p><strong>Status:</strong> ${produtos[i].status}</p>
           <p><strong>Email:</strong> ${produtos[i].email || 'N/A'}</p>
@@ -508,8 +722,9 @@ function excluirProduto(i, filtroStatus) {
       produtos.splice(i, 1);
       atualizarListas();
       atualizarDashboard();
+      listarProdutosPainel();
       if (filtroStatus === 'categoria') {
-        filtrarPorCategoria(produtos[i]?.categoria || '');
+        filtrarPorCategoria(produtos[i]?.categoria, categorias.find(c => c.nome === produtos[i]?.categoria)?.id || '');
       } else if (filtroStatus === 'manutencao') {
         carregarManutencao();
       } else {
@@ -543,11 +758,17 @@ function atualizarDashboard() {
   const totalOperacao = produtos.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
   const totalProdutos = produtos.length;
 
-  document.querySelector('#secao-painel .stats div:nth-child(1) strong').textContent = totalBackup.toLocaleString();
-  document.querySelector('#secao-painel .stats div:nth-child(2) strong').textContent = totalProdutos.toLocaleString();
-  document.querySelector('#cardReceita p').textContent = `R$ ${produtos.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
-  document.querySelector('#cardBackup p').textContent = totalBackup.toLocaleString();
-  document.querySelector('#cardOperacao p').textContent = totalOperacao.toLocaleString();
+  const backupElement = document.querySelector('#secao-painel .stats div:nth-child(1) strong');
+  const produtosElement = document.querySelector('#secao-painel .stats div:nth-child(2) strong');
+  const receitaElement = document.querySelector('#cardReceita p');
+  const backupCardElement = document.querySelector('#cardBackup p');
+  const operacaoCardElement = document.querySelector('#cardOperacao p');
+
+  if (backupElement) backupElement.textContent = totalBackup.toLocaleString();
+  if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString();
+  if (receitaElement) receitaElement.textContent = `R$ ${produtos.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toFixed(2)}`;
+  if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString();
+  if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString();
 }
 
 function carregarManutencao() {
@@ -594,7 +815,8 @@ function atualizarListas() {
   const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
   if (secaoAtiva === 'manutencao') carregarManutencao();
   else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva)) listarProdutos(secaoAtiva);
-  else if (secaoAtiva === 'categoria-detalhes') filtrarPorCategoria(produtos[0]?.categoria || '');
+  else if (secaoAtiva === 'categoria-detalhes') filtrarPorCategoria(produtos[0]?.categoria || '', categorias.find(c => c.nome === produtos[0]?.categoria)?.id || '');
+  else if (secaoAtiva === 'painel') listarProdutosPainel();
 }
 
 window.confirmarCriarProduto = confirmarCriarProduto;
@@ -604,3 +826,6 @@ window.listarProdutos = listarProdutos;
 window.mostrarDetalhesProduto = mostrarDetalhesProduto;
 window.mostrarModalTransferencia = mostrarModalTransferencia;
 window.mostrarSecao = mostrarSecao;
+window.excluirCategoria = excluirCategoria;
+window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
+window.atualizarCategoriaProduto = atualizarCategoriaProduto;
