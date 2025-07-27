@@ -736,3 +736,205 @@ table td, table th {
   margin-bottom: 10px;
 }
 
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f4f6f9;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #2f3542 0%, #1b1b2b 100%);
+  color: white;
+  padding: 1.5rem;
+}
+
+.sidebar ul li {
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.3s;
+}
+
+.sidebar ul li:hover,
+.sidebar ul li.active {
+  background-color: #57606f;
+}
+
+.sidebar .admin-switch {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.sidebar .admin-switch button {
+  padding: 10px 20px;
+  border: none;
+  background: #1e90ff;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.profile {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.profile .stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 1rem;
+}
+
+.table-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.05);
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.criar-produto,
+.export-btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.criar-produto {
+  background: #3498db;
+  color: white;
+}
+
+.export-btn {
+  background: #2ecc71;
+  color: white;
+}
+
+.table-section table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-section th, .table-section td {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+  text-align: left;
+}
+
+.table-section td button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.menu-item {
+  position: fixed;
+  top: 20%;
+  right: 20px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.15);
+  z-index: 1000;
+  width: 250px;
+}
+
+.menu-item button {
+  margin-top: 10px;
+  padding: 8px;
+  width: 100%;
+  border: none;
+  border-radius: 5px;
+  background: #f1f1f1;
+  cursor: pointer;
+}
+
+.menu-item button:hover {
+  background: #e1e1e1;
+}
+
+body.modo-escuro {
+  background: #1e1e2f;
+  color: #f1f1f1;
+}
+
+body.modo-escuro .main,
+body.modo-escuro .table-section,
+body.modo-escuro .menu-item {
+  background: #2e2e3e;
+}
+
+body.modo-admin .sidebar .delete-category-btn,
+body.modo-admin .menu-item button {
+  display: inline-block;
+}
+
+.delete-category-btn {
+  display: none;
+}
+
+
+.menu-container {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.menu-button {
+  background-color: #3a3a4a;
+  border: none;
+  color: white;
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.menu-options {
+  display: none;
+  position: absolute;
+  top: 35px;
+  left: 0;
+  background-color: #2a2a3a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  min-width: 150px;
+  z-index: 1000;
+  padding: 5px 0;
+}
+
+.menu-options div {
+  padding: 8px 12px;
+  color: white;
+  cursor: pointer;
+}
+
+.menu-options div:hover {
+  background-color: #444;
+}

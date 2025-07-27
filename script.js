@@ -573,9 +573,6 @@ function listarProdutosPainel(filtroCategoria = '') {
 
   const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
 
-  // Depuração: Verificar se há produtos filtrados
-  console.log("Produtos filtrados por categoria", filtroCategoria, produtosFiltrados);
-
   if (produtosFiltrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8">Nenhum produto encontrado para esta categoria.</td></tr>';
     return;
@@ -583,6 +580,18 @@ function listarProdutosPainel(filtroCategoria = '') {
 
   produtosFiltrados.forEach((produto) => {
     const tr = document.createElement("tr");
+
+    const opcoesStatus = ['backup', 'operacao', 'necessario', 'manutencao']
+      .filter(opt => opt !== produto.status)
+      .map(opt => `
+        <div onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'todos')">
+          ${opt === 'manutencao' ? '🔧 Manutenção' :
+          opt === 'operacao' ? '🚀 Operação' :
+          opt === 'necessario' ? '🔩 Necessário OPS' :
+          '📦 Backup'}
+        </div>
+      `).join('');
+
     tr.innerHTML = `
       <td onclick="mostrarDetalhesProduto('${produto.id}', 'painel')" style="cursor: pointer;">${produto.nome}</td>
       <td>${produto.quantidade}</td>
@@ -597,17 +606,30 @@ function listarProdutosPainel(filtroCategoria = '') {
       <td>${produto.email || 'N/A'}</td>
       <td>${produto.jogo || 'N/A'}</td>
       <td>
-        ${['backup', 'operacao', 'necessario', 'manutencao']
-          .filter(opt => opt !== produto.status)
-          .map(opt => `
-            <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'todos')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
-          `).join('')}
-        <button onclick="excluirProduto('${produto.id}', 'todos')">🗑️</button>
+        <div class="menu-container">
+          <button onclick="toggleMenu(this)" class="menu-button">☰</button>
+          <div class="menu-options">
+            ${opcoesStatus}
+            <div onclick="excluirProduto('${produto.id}', 'todos')">🗑️ Excluir</div>
+          </div>
+        </div>
+
+        <div class="menu-container">
+          <button onclick="toggleMenu(this)" class="menu-button">Sobre</button>
+          <div class="menu-options">
+            <div>💰 Valor: ${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            <div>📦 Status: ${produto.status}</div>
+            <div>📧 Email: ${produto.email || 'N/A'}</div>
+            <div>🎮 Jogo: ${produto.jogo || 'N/A'}</div>
+          </div>
+        </div>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 }
+
 
 function atualizarCategoriaProduto(produtoId, novaCategoria) {
   if (!window.db || !window.firestoreFunctions) return;
@@ -627,35 +649,6 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
         alert("Falha ao atualizar categoria do produto.");
       });
   }
-}
-
-function exportarParaExcel() {
-  const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
-  const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
-
-  const headers = ['Nome', 'Quantidade', 'Categoria', 'Valor Unitário', 'Status', 'Email', 'Jogo', 'Defeito', 'Local de Conserto', 'Custo', 'Agendamento'];
-  const rows = produtosFiltrados.map(p => [
-    p.nome,
-    p.quantidade,
-    p.categoria || 'N/A',
-    p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    p.status,
-    p.email || 'N/A',
-    p.jogo || 'N/A',
-    p.defeito || 'N/A',
-    p.localConserto || 'N/A',
-    p.custoManutencao ? p.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'N/A',
-    p.agendamento || 'N/A'
-  ].map(cell => `"${cell}"`).join('\t'));
-
-  const tsvContent = [headers.join('\t'), ...rows].join('\n');
-  
-  navigator.clipboard.writeText(tsvContent).then(() => {
-    alert("Dados copiados para a área de transferência! Cole em uma planilha (como Excel).");
-  }).catch(error => {
-    console.error("Erro ao copiar dados:", error);
-    alert("Falha ao copiar dados para a área de transferência.");
-  });
 }
 
 function filtrarProdutos(filtroStatus) {
@@ -991,23 +984,26 @@ function mostrarDetalhesReceita() {
   const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
   const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
 
-  const produtoContagem = {};
-  let totalReceita = 0;
+  const produtosManutencao = produtosFiltrados.filter(p => p.status === 'manutencao');
 
-  produtosFiltrados.forEach(p => {
+  const produtoContagem = {};
+  let totalUnidades = 0;
+
+  produtosManutencao.forEach(p => {
     produtoContagem[p.nome] = (produtoContagem[p.nome] || 0) + p.quantidade;
-    totalReceita += p.quantidade * p.valor;
+    totalUnidades += p.quantidade;
   });
 
   const detalhes = Object.entries(produtoContagem)
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes da Receita${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\nProdutos:\n${detalhes || 'Nenhum produto registrado.'}`);
+  alert(`Detalhes das Unidades em Manutenção${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalUnidades} unidade(s)\n\nProdutos:\n${detalhes || 'Nenhum item em manutenção.'}`);
 }
 
 function atualizarDashboard(filtroCategoria = '') {
   const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
+  
   const totalBackup = produtosFiltrados.filter(p => p.status === 'backup').reduce((sum, p) => sum + p.quantidade, 0);
   const totalOperacao = produtosFiltrados.filter(p => p.status === 'operacao').reduce((sum, p) => sum + p.quantidade, 0);
   const totalProdutos = produtosFiltrados.length;
@@ -1018,15 +1014,19 @@ function atualizarDashboard(filtroCategoria = '') {
   const backupCardElement = document.querySelector('#cardBackup p');
   const operacaoCardElement = document.querySelector('#cardOperacao p');
 
+  const totalManutencao = produtosFiltrados
+    .filter(p => p.status === 'manutencao')
+    .reduce((sum, p) => sum + p.quantidade, 0);
+
   if (backupElement) backupElement.textContent = totalBackup.toLocaleString('pt-BR');
   if (produtosElement) produtosElement.textContent = totalProdutos.toLocaleString('pt-BR');
-  if (receitaElement) receitaElement.textContent = produtosFiltrados.reduce((sum, p) => sum + p.quantidade * p.valor, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (receitaElement) receitaElement.textContent = totalManutencao.toLocaleString('pt-BR');
   if (backupCardElement) backupCardElement.textContent = totalBackup.toLocaleString('pt-BR');
   if (operacaoCardElement) operacaoCardElement.textContent = totalOperacao.toLocaleString('pt-BR');
 
-  // Chama listarProdutosPainel com o mesmo filtroCategoria
   listarProdutosPainel(filtroCategoria);
 }
+
 
 function carregarManutencao() {
   const tabela = document.getElementById("tabelaProdutosManutencao");
@@ -1083,6 +1083,28 @@ function atualizarListas() {
     listarProdutosPainel(filtroCategoria);
   }
 }
+
+function toggleMenu(button) {
+  // Fecha todos os menus antes de abrir o atual
+  document.querySelectorAll('.menu-options').forEach(menu => {
+    if (menu !== button.nextElementSibling) {
+      menu.style.display = 'none';
+    }
+  });
+
+  const menu = button.nextElementSibling;
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+// Fecha menus clicando fora
+document.addEventListener('click', function (event) {
+  if (!event.target.closest('.menu-container')) {
+    document.querySelectorAll('.menu-options').forEach(menu => {
+      menu.style.display = 'none';
+    });
+  }
+});
+
 window.confirmarCriarProduto = confirmarCriarProduto;
 window.mostrarModalCriarProduto = mostrarModalCriarProduto;
 window.excluirProduto = excluirProduto;
@@ -1094,5 +1116,4 @@ window.excluirCategoria = excluirCategoria;
 window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
 window.atualizarCategoriaProduto = atualizarCategoriaProduto;
 window.voltar = voltar;
-window.exportarParaExcel = exportarParaExcel;
 window.confirmarEditarProduto = confirmarEditarProduto;

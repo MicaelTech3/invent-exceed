@@ -14,10 +14,10 @@
       <h1>INVENT</h1>
       <ul>
         <li class="nav-item active" data-secao="painel" aria-label="Painel"><i class="fas fa-chart-line"></i>PAINEL</li>
-        <li class="nav-item" data-secao="categorias" aria-label="Categorias"><i class="fas fa-tags"></i>ANDARES</li>
+        <li class="nav-item" data-secao="categorias" aria-label="Categorias"><i class="fas fa-tags"></i>CATEGORIAS</li>
         <li class="nav-item" data-secao="backup" aria-label="Backup"><i class="fas fa-box"></i>BACKUP</li>
         <li class="nav-item" data-secao="operacao" aria-label="Operação"><i class="fas fa-rocket"></i>OPERAÇÃO</li>
-        <li class="nav-item" data-secao="Compras" aria-label="Compras"><i class="fas fa-shopping-cart"></i>LISTA DE COMPRAS</li>
+        <li class="nav-item" data-secao="Compras" aria-label="Compras"><i class="fas fa-wrench"></i>COMPRAS</li>
         <li class="nav-item" data-secao="manutencao" aria-label="Manutenção"><i class="fas fa-tools"></i>MANUTENÇÃO</li>
         <li class="nav-item" data-secao="todos" aria-label="Todos"><i class="fas fa-list"></i>TODOS</li>
         <li id="toggleDark" style="cursor: pointer;" aria-label="Alternar Modo Escuro"><i class="fas fa-moon"></i> Mudar para Modo Escuro</li>
@@ -31,15 +31,14 @@
           <h3>T.I</h3>
           <p>Proprietário</p>
           <div class="stats">
-            <div><strong>0</strong><p>Unidades OPS</p></div>
-            <div><strong>0</strong><p>Unidades BKP</p></div>
-            <div><strong>0</strong><p>Unidades em Manutenção</p></div>
+            <div><strong>0</strong><p>Total Backup</p></div>
+            <div><strong>0</strong><p>Produtos</p></div>
           </div>
         </div>
         <div class="category-filter">
-          <label for="filtroCategoria">Filtrar por Andar:</label>
+          <label for="filtroCategoria">Filtrar por Categoria:</label>
           <select id="filtroCategoria" onchange="atualizarDashboard(this.value)">
-            <option value="">Todos os Andares</option>
+            <option value="">Todas as Categorias</option>
           </select>
         </div>
         <div class="cards">
@@ -49,158 +48,154 @@
         </div>
         <div class="table-section">
           <div class="table-header">
-            <button class="criar-produto" onclick="mostrarModalCriarProduto('todos')">Adicionar Item</button>
+            <button class="delete-category-btn" onclick="mostrarModalExcluirCategoria()">Excluir Categoria</button>
+            <button class="criar-produto" onclick="mostrarModalCriarProduto('todos')">Criar Produto</button>
+            <button class="export-btn" onclick="exportarParaExcel()">Exportar</button>
           </div>
           <table id="tabelaProdutosPainel">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
-                <th>Andar</th>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
                 <th>Valor</th>
                 <th>Status</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-categorias" style="display: none;">
         <div class="overview">
-          <h3>Andares</h3>
+          <h3>Categorias</h3>
           <div class="category-buttons">
-            <button id="btnCriarCategoria" class="category-create-btn">Criar Novo Andar</button>
+            <button id="btnCriarCategoria" class="category-create-btn">Criar Nova Categoria</button>
           </div>
           <div id="categoriasContainer" class="categorias-container"></div>
         </div>
       </section>
-
       <section id="secao-categoria-detalhes" style="display: none;">
         <div class="table-section">
-          <h3>Detalhes do Andar</h3>
+          <h3>Detalhes da Categoria</h3>
           <div class="table-header">
             <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
-            <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', document.querySelector('#secao-categoria-detalhes h3').textContent.replace('Detalhes do Andar: ', ''))">Adicionar Item</button>
+            <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', document.querySelector('#secao-categoria-detalhes h3').textContent.replace('Detalhes da Categoria: ', ''))">Criar Produto</button>
           </div>
           <table id="tabelaProdutosCategoria">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
+                <th>Nome</th>
+                <th>Qtd</th>
                 <th>Valor</th>
                 <th>Status</th>
                 <th>Local de Conserto</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-backup" style="display: none;">
         <div class="table-section">
-          <h3>Itens em Backup</h3>
+          <h3>Produtos em Backup</h3>
           <table id="tabelaProdutosBackup">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
-                <th>Andar</th>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
                 <th>Valor</th>
                 <th>Status</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-operacao" style="display: none;">
         <div class="table-section">
-          <h3>Itens em Operação</h3>
+          <h3>Produtos em Operação</h3>
           <table id="tabelaProdutosOperacao">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
-                <th>Andar</th>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
                 <th>Valor</th>
                 <th>Status</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-necessario" style="display: none;">
         <div class="table-section">
-          <h3>Lista de Compras</h3>
+          <h3>Produtos em Necessário OPS</h3>
           <table id="tabelaProdutosNecessario">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
-                <th>Andar</th>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
                 <th>Valor</th>
                 <th>Status</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-manutencao" style="display: none;">
         <div class="table-section">
-          <h3>Itens em Manutenção</h3>
+          <h3>Produtos em Manutenção</h3>
           <table id="tabelaProdutosManutencao">
             <thead>
               <tr>
-                <th>Item</th>
+                <th>Nome</th>
                 <th>Defeito</th>
                 <th>Local de Conserto</th>
                 <th>Custo</th>
                 <th>Agendamento</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
       <section id="secao-todos" style="display: none;">
         <div class="table-section">
-          <h3>Todos os Itens</h3>
+          <h3>Todos os Produtos</h3>
           <table id="tabelaProdutosTodos">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Identificador</th>
-                <th>Andar</th>
+                <th>Nome</th>
+                <th>Qtd</th>
+                <th>Categoria</th>
+                <th>Valor</th>
                 <th>Status</th>
                 <th>Email</th>
                 <th>Jogo</th>
-                <th>Menu</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -209,9 +204,8 @@
       </section>
     </main>
   </div>
-
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import {
       getFirestore,
       collection,
@@ -234,30 +228,51 @@
       measurementId: "G-DVEB6FGELT"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-    const auth = getAuth(app);
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const storage = getStorage(app);
+      const auth = getAuth(app);
+      window.db = db;
+      window.storage = storage;
+      window.auth = auth;
+      window.firestoreFunctions = {
+        collection,
+        getDocs,
+        addDoc,
+        setDoc,
+        doc,
+        deleteDoc
+      };
+      window.storageFunctions = {
+        ref,
+        uploadBytes,
+        getDownloadURL
+      };
 
-    window.db = db;
-    window.storage = storage;
-    window.auth = auth;
-    window.firestoreFunctions = { collection, getDocs, addDoc, setDoc, doc, deleteDoc };
-    window.storageFunctions = { ref, uploadBytes, getDownloadURL };
-
-    signInAnonymously(auth).then(() => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          import('./script.js').then(() => {
-            if (window.onload) window.onload();
-          });
-        } else {
-          alert("Erro: Usuário não autenticado.");
-        }
+      signInAnonymously(auth).then(() => {
+        console.log("Login anônimo bem-sucedido");
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            console.log("Usuário autenticado:", user.uid);
+            import('./script.js').then(() => {
+              if (window.onload) window.onload();
+            });
+          } else {
+            console.error("Nenhum usuário autenticado");
+            alert("Erro: Usuário não autenticado.");
+          }
+        });
+      }).catch((error) => {
+        console.error("Erro ao fazer login anônimo:", error);
+        alert("Erro ao autenticar: " + error.message);
       });
-    }).catch((error) => {
-      alert("Erro ao autenticar: " + error.message);
-    });
+    } catch (error) {
+      console.error("Erro ao inicializar Firebase:", error);
+      alert("Erro ao iniciar Firebase: " + error.message);
+    }
+
+ import './script.js';
   </script>
   <script src="script.js"></script>
 </body>
