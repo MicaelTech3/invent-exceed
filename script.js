@@ -2,6 +2,8 @@
 let produtos = [];
 let categorias = [];
 let navigationHistory = ['painel'];
+let listaCompras = { sheets: { 'Sheet1': [] } }; // Estrutura para múltiplas abas
+let currentSheet = 'Sheet1';
 
 function debounce(func, wait) {
   let timeout;
@@ -57,6 +59,7 @@ window.onload = () => {
   if (typeof window.db !== 'undefined' && window.db && window.firestoreFunctions && window.storageFunctions) {
     carregarProdutosFirestore();
     carregarCategorias();
+    carregarListaCompras(); // Carregar lista de compras
   } else {
     console.error("Firebase não inicializado corretamente:", window.db, window.firestoreFunctions, window.storageFunctions);
     alert("Erro: Firebase não está inicializado. Verifique a console.");
@@ -94,7 +97,7 @@ function mostrarSecao(secao) {
   const itens = document.querySelectorAll(".nav-item");
   itens.forEach(i => i.classList.remove("active"));
 
-  const nomes = ['painel', 'categorias', 'backup', 'operacao', 'necessario', 'manutencao', 'todos'];
+  const nomes = ['painel', 'categorias', 'backup', 'operacao', 'necessario', 'manutencao', 'todos', 'sobre'];
   const index = nomes.indexOf(secao);
   if (index >= 0) itens[index].classList.add("active");
 
@@ -117,6 +120,7 @@ function mostrarSecao(secao) {
   }
   if (secao === 'manutencao') carregarManutencao();
   if (secao === 'categorias') carregarCategorias();
+  if (secao === 'necessario') atualizarListaCompras();
 }
 
 function voltar() {
@@ -140,7 +144,7 @@ function mostrarModalCriarCategoria() {
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Criar Nova Categoria</h3>
+      <h3>Criar Novo Andar</h3>
       <label>Nome:</label><input id="nomeCategoria" type="text" required><br>
       <label>Responsável:</label><input id="responsavel" type="text" required><br>
       <label>Ícone:</label>
@@ -245,20 +249,20 @@ function carregarCategorias() {
     container.innerHTML = "";
     categorias = [];
     snapshot.forEach(doc => {
-      const data = doc.data();
-      categorias.push({ id: doc.id, ...data });
+      const data = doc.id;
+      categorias.push({ id: doc.id, ...doc.data() });
       const card = document.createElement("div");
       card.className = "categoria-card";
       card.innerHTML = `
-        <img src="${data.icon || 'https://api.iconify.design/mdi:help-circle.svg'}?width=48&height=48" class="categoria-icon" alt="${data.nome}">
+        <img src="${doc.data().icon || 'https://api.iconify.design/mdi:help-circle.svg'}?width=48&height=48" class="categoria-icon" alt="${doc.data().nome}">
         <div>
-          <strong>${data.nome}</strong><br>
-          <small>Responsável: ${data.responsavel || 'N/A'}</small>
+          <strong>${doc.data().nome}</strong><br>
+          <small>Responsável: ${doc.data().responsavel || 'N/A'}</small>
         </div>
       `;
       const newCard = card.cloneNode(true);
       card.replaceWith(newCard);
-      newCard.onclick = () => filtrarPorCategoria(data.nome, doc.id);
+      newCard.onclick = () => filtrarPorCategoria(doc.data().nome, doc.id);
       container.appendChild(newCard);
     });
     atualizarFiltroCategoria();
@@ -274,7 +278,7 @@ function atualizarFiltroCategoria() {
   const filtroCategoria = document.getElementById('filtroCategoria');
   if (!filtroCategoria) return;
   const valorSalvo = localStorage.getItem('filtroCategoria') || '';
-  filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
+  filtroCategoria.innerHTML = '<option value="">Todos os Andares</option>';
   categorias.forEach(c => {
     const option = document.createElement('option');
     option.value = c.nome;
@@ -292,7 +296,7 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
 
   const tabela = document.getElementById("tabelaProdutosCategoria");
   tabela.innerHTML = "";
-  secao.querySelector('h3').textContent = `Detalhes da Categoria: ${nomeCategoria}`;
+  secao.querySelector('h3').textContent = `Detalhes do Andar: ${nomeCategoria}`;
 
   const existingHeader = tabela.parentElement.querySelector('.table-header');
   if (existingHeader) existingHeader.remove();
@@ -303,21 +307,17 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   header.className = "table-header";
   header.innerHTML = `
     <button class="back-button" onclick="voltar()">⬅️ Voltar</button>
-    <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Criar Produto</button>
+    <button class="criar-produto" onclick="mostrarModalCriarProduto('categoria', '${nomeCategoria}')">Adicionar Item</button>
   `;
   tabela.parentElement.insertBefore(header, tabela);
 
   const thead = document.createElement("thead");
   thead.innerHTML = `
     <tr>
-      <th>Nome</th>
-      <th>Qtd</th>
-      <th>Valor</th>
-      <th>Status</th>
+      <th>Item</th>
+      <th>Identificador</th>
       <th>Local de Conserto</th>
-      <th>Email</th>
-      <th>Jogo</th>
-      <th>Ações</th>
+      <th>Menu</th>
     </tr>
   `;
   tabela.appendChild(thead);
@@ -326,20 +326,16 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   produtosFiltrados.forEach((produto) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto('${produto.id}', 'categoria-detalhes')" style="cursor: pointer;">${produto.nome}</td>
+      <td>${produto.nome}</td>
       <td>${produto.quantidade}</td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-      <td>${produto.status}</td>
-      <td>${produto.status === 'manutencao' ? (produto.localConserto || 'N/A') : 'N/A'}</td>
-      <td>${produto.email || 'N/A'}</td>
-      <td>${produto.jogo || 'N/A'}</td>
-      <td>
-        ${['backup', 'operacao', 'necessario', 'manutencao']
-          .filter(opt => opt !== produto.status)
-          .map(opt => `
-            <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'categoria')"> ${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
-          `).join('')}
-        <button onclick="excluirProduto('${produto.id}', 'categoria')">🗑️</button>
+      <td>${produto.localConserto || 'N/A'}</td>
+      <td class="menu-container">
+        <div class="menu-label"></div>
+        <button class="menu-button" onclick="toggleMenu(this)">≡</button>
+        <div class="menu-options" style="display: none;">
+          <button onclick="mostrarModalSobre('${produto.id}')">Sobre</button>
+          <button onclick="mostrarModalEnviarItem('${produto.id}', 'categoria')">Enviar Item</button>
+        </div>
       </td>
     `;
     tbody.appendChild(tr);
@@ -350,7 +346,7 @@ function filtrarPorCategoria(nomeCategoria, categoriaId) {
   actionBar.className = "category-action-bar";
   const deleteButton = document.createElement("button");
   deleteButton.className = "delete-category-btn";
-  deleteButton.textContent = "Excluir Categoria";
+  deleteButton.textContent = "Excluir Andar";
   deleteButton.onclick = () => excluirCategoria(categoriaId, nomeCategoria);
   actionBar.appendChild(deleteButton);
   tabela.parentElement.appendChild(actionBar);
@@ -367,10 +363,10 @@ function mostrarModalExcluirCategoria() {
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Excluir Categoria</h3>
+      <h3>Excluir Andar</h3>
       <label>Selecione a Categoria:</label>
       <select id="categoriaExcluir" required>
-        <option value="">Selecione uma categoria</option>
+        <option value="">Selecione um andar</option>
         ${categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')}
       </select><br>
       <button id="confirmExcluirCategoria">Confirmar</button>
@@ -384,7 +380,7 @@ function mostrarModalExcluirCategoria() {
     const categoriaId = document.getElementById('categoriaExcluir')?.value;
     const categoria = categorias.find(c => c.id === categoriaId);
     if (!categoriaId || !categoria) {
-      alert("Por favor, selecione uma categoria.");
+      alert("Por favor, selecione um andar.");
       return;
     }
     excluirCategoria(categoriaId, categoria.nome);
@@ -392,7 +388,7 @@ function mostrarModalExcluirCategoria() {
 }
 
 function excluirCategoria(categoriaId, nomeCategoria) {
-  if (confirm(`Deseja realmente excluir a categoria "${nomeCategoria}"? Os produtos associados permanecerão, mas sem categoria.`)) {
+  if (confirm(`Deseja realmente excluir o andar "${nomeCategoria}"? Os itens associados permanecerão, mas sem andar.`)) {
     if (!window.db || !window.firestoreFunctions) return;
     const { doc, deleteDoc, collection, getDocs, setDoc } = window.firestoreFunctions;
 
@@ -408,7 +404,7 @@ function excluirCategoria(categoriaId, nomeCategoria) {
           .then(() => {
             produtos = produtos.map(p => p.categoria === nomeCategoria ? { ...p, categoria: '' } : p);
             categorias = categorias.filter(c => c.id !== categoriaId);
-            alert("Categoria excluída com sucesso! Produtos associados agora estão sem categoria.");
+            alert("Andar excluído com sucesso! Itens associados agora estão sem andar.");
             document.querySelector('.modal')?.remove();
             carregarCategorias();
             const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
@@ -419,13 +415,13 @@ function excluirCategoria(categoriaId, nomeCategoria) {
             mostrarSecao('painel');
           })
           .catch(error => {
-            console.error("Erro ao excluir categoria:", error);
-            alert("Falha ao excluir categoria.");
+            console.error("Erro ao excluir andar:", error);
+            alert("Falha ao excluir andar.");
           });
       })
       .catch(error => {
-        console.error("Erro ao atualizar produtos:", error);
-        alert("Falha ao atualizar produtos associados.");
+        console.error("Erro ao atualizar itens:", error);
+        alert("Falha ao atualizar itens associados.");
       });
   }
 }
@@ -435,16 +431,17 @@ function mostrarModalCriarProduto(status, categoriaPreenchida = '') {
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Criar Novo Produto</h3>
+      <h3>Criar Novo Item</h3>
       <label>Nome:</label><input id="nome" type="text" required><br>
+      <label>Identificador:</label><input id="identificador" type="text" required><br>
       <label>Quantidade:</label><input id="quantidade" type="number" min="1" required><br>
-      <label>Categoria:</label><input id="categoria" type="text" value="${categoriaPreenchida}" required><br>
+      <label>Andar:</label><input id="categoria" type="text" value="${categoriaPreenchida}" required><br>
       <label>Valor Unitário:</label><input id="valor" type="number" step="0.01" min="0" required><br>
       <label>Status:</label>
       <select id="status" required>
         <option value="backup">Backup</option>
         <option value="operacao">Operação</option>
-        <option value="necessario">Necessário OPS</option>
+        <option value="necessario">Lista de Compras</option>
         <option value="manutencao">Manutenção</option>
       </select><br>
       <label>Email (opcional):</label><input id="email" type="email"><br>
@@ -461,6 +458,7 @@ function mostrarModalCriarProduto(status, categoriaPreenchida = '') {
 
 function confirmarCriarProduto(status, categoriaPreenchida) {
   const nome = document.getElementById('nome')?.value.trim();
+  const identificador = document.getElementById('identificador')?.value.trim();
   const quantidade = parseInt(document.getElementById('quantidade')?.value || 1);
   const categoria = document.getElementById('categoria')?.value.trim();
   const valor = parseFloat(document.getElementById('valor')?.value || 0);
@@ -468,7 +466,7 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
   const email = document.getElementById('email')?.value.trim() || '';
   const jogo = document.getElementById('jogo')?.value.trim() || '';
 
-  if (!nome || quantidade < 1 || !categoria || valor < 0 || !selectedStatus) {
+  if (!nome || !identificador || quantidade < 1 || !categoria || valor < 0 || !selectedStatus) {
     alert("Por favor, preencha todos os campos obrigatórios corretamente.");
     return;
   }
@@ -481,6 +479,7 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
   const { collection, addDoc } = window.firestoreFunctions;
   const novoProduto = {
     nome,
+    identificador,
     quantidade: 1,
     categoria,
     valor,
@@ -500,8 +499,8 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
       addDoc(collection(window.db, "produtos"), { ...novoProduto })
         .then(docRef => ({ ...novoProduto, id: docRef.id }))
         .catch(error => {
-          console.error("Erro ao adicionar produto:", error);
-          throw new Error("Falha ao adicionar produto ao Firebase.");
+          console.error("Erro ao adicionar item:", error);
+          throw new Error("Falha ao adicionar item ao Firebase.");
         })
     );
   }
@@ -523,7 +522,7 @@ function confirmarCriarProduto(status, categoriaPreenchida) {
       listarProdutosPainel(filtroCategoria);
     }
   }).catch(error => {
-    console.error("Erro ao criar produtos:", error);
+    console.error("Erro ao criar itens:", error);
     alert(error.message);
   });
 }
@@ -544,8 +543,8 @@ function carregarProdutosFirestore() {
     const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
     atualizarDashboard(filtroCategoria);
   }).catch((error) => {
-    console.error("Erro ao carregar produtos:", error);
-    alert("Erro ao carregar produtos do Firebase.");
+    console.error("Erro ao carregar itens:", error);
+    alert("Erro ao carregar itens do Firebase.");
   });
 }
 
@@ -559,8 +558,8 @@ function atualizarProdutoFirestore(produto) {
     const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
     atualizarDashboard(filtroCategoria);
   }).catch((error) => {
-    console.error("Erro ao atualizar produto:", error);
-    alert("Falha ao atualizar produto no Firebase.");
+    console.error("Erro ao atualizar item:", error);
+    alert("Falha ao atualizar item no Firebase.");
   });
 }
 
@@ -574,54 +573,38 @@ function listarProdutosPainel(filtroCategoria = '') {
   const produtosFiltrados = filtroCategoria ? produtos.filter(p => p.categoria === filtroCategoria) : produtos;
 
   if (produtosFiltrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8">Nenhum produto encontrado para esta categoria.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4">Nenhum item encontrado para este andar.</td></tr>';
     return;
   }
 
   produtosFiltrados.forEach((produto) => {
     const tr = document.createElement("tr");
-
     const opcoesStatus = ['backup', 'operacao', 'necessario', 'manutencao']
       .filter(opt => opt !== produto.status)
       .map(opt => `
         <div onclick="mostrarModalTransferencia('${produto.id}', '${opt}', 'todos')">
-          ${opt === 'manutencao' ? '🔧 Manutenção' :
-          opt === 'operacao' ? '🚀 Operação' :
-          opt === 'necessario' ? '🔩 Necessário OPS' :
-          '📦 Backup'}
+          ${opt === 'manutencao' ? 'Enviar para > Manutenção' :
+          opt === 'operacao' ? 'Enviar para > Operação' :
+          opt === 'necessario' ? 'Enviar para > Lista de Compras' :
+          'Enviar para > Backup'}
         </div>
       `).join('');
 
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto('${produto.id}', 'painel')" style="cursor: pointer;">${produto.nome}</td>
+      <td>${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>
         <select onchange="atualizarCategoriaProduto('${produto.id}', this.value)">
-          <option value="">Sem categoria</option>
+          <option value="">Sem andar</option>
           ${categorias.map(c => `<option value="${c.nome}" ${produto.categoria === c.nome ? 'selected' : ''}>${c.nome}</option>`).join('')}
         </select>
       </td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-      <td>${produto.status}</td>
-      <td>${produto.email || 'N/A'}</td>
-      <td>${produto.jogo || 'N/A'}</td>
-      <td>
-        <div class="menu-container">
-          <button onclick="toggleMenu(this)" class="menu-button">☰</button>
-          <div class="menu-options">
-            ${opcoesStatus}
-            <div onclick="excluirProduto('${produto.id}', 'todos')">🗑️ Excluir</div>
-          </div>
-        </div>
-
-        <div class="menu-container">
-          <button onclick="toggleMenu(this)" class="menu-button">Sobre</button>
-          <div class="menu-options">
-            <div>💰 Valor: ${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-            <div>📦 Status: ${produto.status}</div>
-            <div>📧 Email: ${produto.email || 'N/A'}</div>
-            <div>🎮 Jogo: ${produto.jogo || 'N/A'}</div>
-          </div>
+      <td class="menu-container">
+        <div class="menu-label"></div>
+        <button class="menu-button" onclick="toggleMenu(this)">≡</button>
+        <div class="menu-options" style="display: none;">
+          <button onclick="mostrarModalSobre('${produto.id}')">Sobre</button>
+          <button onclick="mostrarModalEnviarItem('${produto.id}', 'todos')">Enviar Item</button>
         </div>
       </td>
     `;
@@ -629,7 +612,6 @@ function listarProdutosPainel(filtroCategoria = '') {
     tbody.appendChild(tr);
   });
 }
-
 
 function atualizarCategoriaProduto(produtoId, novaCategoria) {
   if (!window.db || !window.firestoreFunctions) return;
@@ -645,8 +627,8 @@ function atualizarCategoriaProduto(produtoId, novaCategoria) {
         atualizarDashboard(filtroCategoria);
       })
       .catch(error => {
-        console.error("Erro ao atualizar categoria do produto:", error);
-        alert("Falha ao atualizar categoria do produto.");
+        console.error("Erro ao atualizar andar do item:", error);
+        alert("Falha ao atualizar andar do item.");
       });
   }
 }
@@ -676,9 +658,9 @@ function listarProdutos(filtroStatus) {
     container = document.createElement("div");
     container.className = "table-header";
     const botaoCriar = document.createElement("button");
-    botaoCriar.textContent = "Criar Produto";
+    botaoCriar.textContent = "Adicionar Item";
     botaoCriar.className = "criar-produto";
-    botaoCriar.setAttribute('aria-label', 'Criar novo produto');
+    botaoCriar.setAttribute('aria-label', 'Criar novo item');
     botaoCriar.onclick = () => mostrarModalCriarProduto(filtroStatus);
     container.appendChild(botaoCriar);
 
@@ -693,7 +675,7 @@ function listarProdutos(filtroStatus) {
       const searchIcon = document.createElement("span");
       searchIcon.className = "search-icon";
       searchIcon.innerHTML = "🔍";
-      searchIcon.setAttribute('aria-label', 'Pesquisar produtos');
+      searchIcon.setAttribute('aria-label', 'Pesquisar itens');
       searchContainer.appendChild(searchBar);
       searchContainer.appendChild(searchIcon);
       container.appendChild(searchContainer);
@@ -718,56 +700,230 @@ function listarProdutos(filtroStatus) {
     const tr = document.createElement("tr");
     const validOptions = ['backup', 'operacao', 'necessario', 'manutencao'].filter(opt => opt !== produto.status);
     tr.innerHTML = `
-      <td onclick="mostrarDetalhesProduto('${produto.id}', '${filtroStatus}')" style="cursor: pointer;">${produto.nome}</td>
+      <td>${produto.nome}</td>
       <td>${produto.quantidade}</td>
       <td>${produto.categoria}</td>
-      <td>${produto.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-      <td>${produto.status}</td>
-      <td>${produto.email || 'N/A'}</td>
-      <td>${produto.jogo || 'N/A'}</td>
-      <td>
-        ${validOptions.map(opt => `
-          <button onclick="mostrarModalTransferencia('${produto.id}', '${opt}', '${filtroStatus}')">${opt === 'manutencao' ? '🔧 Manutenção' : opt === 'operacao' ? '🚀 Operação' : opt === 'necessario' ? '🔩 Necessário OPS' : '📦 Backup'}</button>
-        `).join('')}
-        <button onclick="excluirProduto('${produto.id}', '${filtroStatus}')">🗑️</button>
+      <td>${produto.localConserto || 'N/A'}</td>
+      <td class="menu-container">
+        <div class="menu-label">Menu</div>
+        <button class="menu-button" onclick="toggleMenu(this)">≡</button>
+        <div class="menu-options" style="display: none;">
+          <button onclick="mostrarModalSobre('${produto.id}')">Sobre</button>
+          <button onclick="mostrarModalEnviarItem('${produto.id}', '${filtroStatus}')">Enviar Item</button>
+        </div>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-function mostrarModalTransferencia(produtoId, novoStatus, filtroStatus) {
-  const produto = produtos.find(p => p.id === produtoId);
-  if (!produto) {
-    console.error("Produto não encontrado para ID:", produtoId);
-    alert("Erro: Produto não encontrado.");
-    return;
+function carregarListaCompras() {
+  if (!window.db || !window.firestoreFunctions) return;
+  const { collection, getDocs } = window.firestoreFunctions;
+  getDocs(collection(window.db, "listaCompras")).then((querySnapshot) => {
+    listaCompras.sheets = { 'Sheet1': [] }; // Resetar abas
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.sheet && data.items) {
+        listaCompras.sheets[data.sheet] = data.items;
+      }
+    });
+    atualizarListaCompras();
+  }).catch((error) => {
+    console.error("Erro ao carregar lista de compras:", error);
+    alert("Erro ao carregar lista de compras do Firebase.");
+  });
+}
+
+function salvarListaCompras() {
+  if (!window.db || !window.firestoreFunctions) return;
+  const { collection, setDoc, doc } = window.firestoreFunctions;
+  Object.keys(listaCompras.sheets).forEach(sheet => {
+    setDoc(doc(window.db, "listaCompras", sheet), { sheet, items: listaCompras.sheets[sheet] })
+      .catch((error) => {
+        console.error("Erro ao salvar aba:", error);
+        alert("Falha ao salvar aba no Firebase.");
+      });
+  });
+}
+
+function adicionarNovaAba() {
+  const novaAba = `Sheet${Object.keys(listaCompras.sheets).length + 1}`;
+  listaCompras.sheets[novaAba] = [];
+  atualizarListaCompras();
+  salvarListaCompras();
+}
+
+function atualizarListaCompras() {
+  const tabela = document.getElementById("tabelaProdutosNecessario");
+  if (!tabela) return;
+
+  const tbody = tabela.querySelector('tbody');
+  tbody.innerHTML = "";
+
+  // Adicionar seleção de abas
+  const sheetSelector = document.createElement('select');
+  sheetSelector.id = 'sheetSelector';
+  Object.keys(listaCompras.sheets).forEach(sheet => {
+    const option = document.createElement('option');
+    option.value = sheet;
+    option.textContent = sheet;
+    if (sheet === currentSheet) option.selected = true;
+    sheetSelector.appendChild(option);
+  });
+  sheetSelector.onchange = (e) => {
+    currentSheet = e.target.value;
+    atualizarListaCompras();
+  };
+
+  const addSheetButton = document.createElement('button');
+  addSheetButton.textContent = 'Nova Aba';
+  addSheetButton.onclick = adicionarNovaAba;
+
+  const header = tabela.parentElement.querySelector('.table-header');
+  if (header) {
+    header.innerHTML = '';
+    header.appendChild(sheetSelector);
+    header.appendChild(addSheetButton);
+    const botaoCriar = document.createElement("button");
+    botaoCriar.textContent = "Adicionar Item";
+    botaoCriar.className = "criar-produto";
+    botaoCriar.setAttribute('aria-label', 'Criar novo item');
+    botaoCriar.onclick = () => mostrarModalCriarItemListaCompras();
+    header.appendChild(botaoCriar);
   }
 
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Item</th>
+      <th>Quantidade</th>
+      <th>Preço Estimado</th>
+      <th>Prioridade</th>
+      <th>Ações</th>
+    </tr>
+  `;
+  tabela.innerHTML = '';
+  tabela.appendChild(thead);
+  tabela.appendChild(tbody);
+
+  listaCompras.sheets[currentSheet].forEach((item, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${item.nome || ''}" onchange="atualizarItemListaCompras('${currentSheet}', ${index}, 'nome', this.value)"></td>
+      <td><input type="number" value="${item.quantidade || 1}" min="1" onchange="atualizarItemListaCompras('${currentSheet}', ${index}, 'quantidade', this.value)"></td>
+      <td><input type="number" step="0.01" value="${item.preco || 0}" min="0" onchange="atualizarItemListaCompras('${currentSheet}', ${index}, 'preco', this.value)"></td>
+      <td><input type="text" value="${item.prioridade || ''}" onchange="atualizarItemListaCompras('${currentSheet}', ${index}, 'prioridade', this.value)"></td>
+      <td><button onclick="excluirItemListaCompras('${currentSheet}', ${index})">Excluir</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function mostrarModalCriarItemListaCompras() {
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Transferir "${produto.nome}" para ${novoStatus}</h3>
-      ${novoStatus === 'manutencao' ? `
-        <label>Defeito:</label><input id="defeito" type="text" value="${produto.defeito || ''}"><br>
-        <label>Local de Conserto:</label><input id="localConserto" type="text" value="${produto.localConserto || ''}"><br>
-        <label>Custo Estimado:</label><input id="custoManutencao" type="number" step="0.01" value="${produto.custoManutencao || 0}"><br>
-        <label>Agendamento (opcional):</label><input id="agendamento" type="text" value="${produto.agendamento || ''}"><br>
-      ` : `
-        <label>Motivo da Transferência:</label><input id="motivo" type="text"><br>
-      `}
-      <button id="confirmTransferButton">Confirmar</button>
+      <h3>Adicionar Item à Lista de Compras</h3>
+      <label>Nome:</label><input id="nomeItem" type="text" required><br>
+      <label>Quantidade:</label><input id="quantidadeItem" type="number" min="1" value="1" required><br>
+      <label>Preço Estimado:</label><input id="precoItem" type="number" step="0.01" min="0" value="0" required><br>
+      <label>Prioridade (opcional):</label><input id="prioridadeItem" type="text"><br>
+      <button id="confirmButton">Confirmar</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
   `;
   document.body.appendChild(modal);
 
-  const confirmButton = modal.querySelector('#confirmTransferButton');
-  confirmButton.addEventListener('click', () => confirmarTransferencia(produtoId, novoStatus, filtroStatus));
+  const confirmButton = modal.querySelector('#confirmButton');
+  confirmButton.addEventListener('click', () => {
+    const nome = document.getElementById('nomeItem')?.value.trim();
+    const quantidade = parseInt(document.getElementById('quantidadeItem')?.value || 1);
+    const preco = parseFloat(document.getElementById('precoItem')?.value || 0);
+    const prioridade = document.getElementById('prioridadeItem')?.value.trim() || '';
+
+    if (!nome || quantidade < 1 || preco < 0) {
+      alert("Por favor, preencha todos os campos obrigatórios corretamente.");
+      return;
+    }
+
+    listaCompras.sheets[currentSheet].push({ nome, quantidade, preco, prioridade });
+    document.querySelector('.modal')?.remove();
+    atualizarListaCompras();
+    salvarListaCompras();
+  });
 }
 
-function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
+function atualizarItemListaCompras(sheet, index, campo, valor) {
+  if (listaCompras.sheets[sheet] && listaCompras.sheets[sheet][index]) {
+    listaCompras.sheets[sheet][index][campo] = valor;
+    salvarListaCompras();
+  }
+}
+
+function excluirItemListaCompras(sheet, index) {
+  if (confirm("Deseja realmente excluir este item?")) {
+    listaCompras.sheets[sheet].splice(index, 1);
+    atualizarListaCompras();
+    salvarListaCompras();
+  }
+}
+
+function mostrarModalTransferencia(produtoId, novoStatus) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
+    return;
+  }
+
+  let modalContent = '';
+  if (novoStatus === 'manutencao') {
+    modalContent = `
+      <h3>Transferir "${produto.nome}" para Manutenção</h3>
+      <label>Defeito:</label><input id="defeito" type="text" required><br>
+      <label>Local de conserto:</label><input id="localConserto" type="text" required><br>
+      <button id="salvarButton">Salvar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    `;
+  } else if (novoStatus === 'backup' && produto.status !== 'manutencao') {
+    modalContent = `
+      <h3>Transferir "${produto.nome}" para Backup</h3>
+      <label>Motivo:</label><input id="motivo" type="text" required><br>
+      <button id="salvarButton">Salvar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    `;
+  } else if (produto.status === 'manutencao' && (novoStatus === 'operacao' || novoStatus === 'backup')) {
+    modalContent = `
+      <h3>Transferir "${produto.nome}" para ${novoStatus === 'operacao' ? 'Operação' : 'Backup'}</h3>
+      <label>Local de conserto:</label><input id="localConserto" type="text" required><br>
+      <label>Valor:</label><input id="valorConserto" type="number" step="0.01" min="0" required><br>
+      <label>Data:</label><input id="dataConserto" type="date" required><br>
+      <label>Condição do óculos:</label><input id="condicaoOculos" type="text" required><br>
+      <button id="salvarButton">Salvar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    `;
+  } else if (produto.status === 'operacao' && novoStatus === 'backup') {
+    modalContent = `
+      <h3>Transferir "${produto.nome}" para Backup</h3>
+      <label>Motivo:</label><input id="motivo" type="text" required><br>
+      <label>Local de conserto:</label><input id="localConserto" type="text" required><br>
+      <button id="salvarButton">Salvar</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    `;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `<div class="modal-content">${modalContent}</div>`;
+  document.body.appendChild(modal);
+
+  const salvarButton = modal.querySelector('#salvarButton');
+  salvarButton.addEventListener('click', () => confirmarTransferencia(produtoId, novoStatus));
+}
+
+function confirmarTransferencia(produtoId, novoStatus) {
   if (!window.db || !window.firestoreFunctions) {
     console.error("Firebase não inicializado para transferência.");
     alert("Erro: Firebase não inicializado.");
@@ -777,19 +933,41 @@ function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
   const { doc, setDoc } = window.firestoreFunctions;
   const produto = produtos.find(p => p.id === produtoId);
   if (!produto) {
-    console.error("Produto não encontrado para ID:", produtoId);
-    alert("Erro: Produto não encontrado.");
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
     return;
   }
 
   let detalhes = {};
   if (novoStatus === 'manutencao') {
-    detalhes.defeito = document.getElementById('defeito')?.value || "";
-    detalhes.localConserto = document.getElementById('localConserto')?.value || "";
-    detalhes.custoManutencao = parseFloat(document.getElementById('custoManutencao')?.value || 0);
-    detalhes.agendamento = document.getElementById('agendamento')?.value || "";
-  } else {
-    detalhes.motivo = document.getElementById('motivo')?.value || "";
+    detalhes.defeito = document.getElementById('defeito')?.value.trim();
+    detalhes.localConserto = document.getElementById('localConserto')?.value.trim();
+    if (!detalhes.defeito || !detalhes.localConserto) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+  } else if (novoStatus === 'backup' && produto.status !== 'manutencao') {
+    detalhes.motivo = document.getElementById('motivo')?.value.trim();
+    if (!detalhes.motivo) {
+      alert("Por favor, preencha o motivo.");
+      return;
+    }
+  } else if (produto.status === 'manutencao' && (novoStatus === 'operacao' || novoStatus === 'backup')) {
+    detalhes.localConserto = document.getElementById('localConserto')?.value.trim();
+    detalhes.valorConserto = parseFloat(document.getElementById('valorConserto')?.value || 0);
+    detalhes.dataConserto = document.getElementById('dataConserto')?.value;
+    detalhes.condicaoOculos = document.getElementById('condicaoOculos')?.value.trim();
+    if (!detalhes.localConserto || !detalhes.valorConserto || !detalhes.dataConserto || !detalhes.condicaoOculos) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+  } else if (produto.status === 'operacao' && novoStatus === 'backup') {
+    detalhes.motivo = document.getElementById('motivo')?.value.trim();
+    detalhes.localConserto = document.getElementById('localConserto')?.value.trim();
+    if (!detalhes.motivo || !detalhes.localConserto) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
   }
 
   const statusAtual = produto.status;
@@ -797,14 +975,20 @@ function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
   if (novoStatus === 'manutencao') {
     produto.defeito = detalhes.defeito;
     produto.localConserto = detalhes.localConserto;
-    produto.custoManutencao = detalhes.custoManutencao;
-    produto.agendamento = detalhes.agendamento;
-  } else {
-    produto.defeito = "";
-    produto.localConserto = "";
     produto.custoManutencao = 0;
-    produto.agendamento = "";
-    produto.motivoTransferencia = detalhes.motivo;
+    produto.agendamento = '';
+  } else if (produto.status === 'manutencao' && (novoStatus === 'operacao' || novoStatus === 'backup')) {
+    produto.defeito = '';
+    produto.localConserto = detalhes.localConserto;
+    produto.custoManutencao = detalhes.valorConserto;
+    produto.agendamento = detalhes.dataConserto;
+    produto.condicao = detalhes.condicaoOculos;
+  } else {
+    produto.defeito = '';
+    produto.localConserto = detalhes.localConserto;
+    produto.custoManutencao = 0;
+    produto.agendamento = '';
+    produto.condicao = '';
   }
 
   produto.historicoTransferencias = produto.historicoTransferencias || [];
@@ -815,33 +999,22 @@ function confirmarTransferencia(produtoId, novoStatus, filtroStatus) {
     detalhes
   });
 
-  console.log("Atualizando produto no Firebase:", produto);
+  console.log("Atualizando item no Firebase:", produto);
   setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
-    console.log("Produto atualizado com sucesso no Firebase:", produto.id);
+    console.log("Item atualizado com sucesso no Firebase:", produto.id);
     document.querySelector('.modal')?.remove();
-    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
-    atualizarDashboard(filtroCategoria);
-    const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
-    if (filtroStatus === 'categoria') {
-      filtrarPorCategoria(produto.categoria, categorias.find(c => c.nome === produto.categoria)?.id || '');
-    } else if (secaoAtiva === 'manutencao' || novoStatus === 'manutencao') {
-      carregarManutencao();
-    } else if (['backup', 'operacao', 'necessario', 'todos'].includes(filtroStatus)) {
-      listarProdutos(filtroStatus);
-    } else {
-      listarProdutosPainel(filtroCategoria);
-    }
+    window.location.reload(); // Recarrega a página com as novas mudanças
   }).catch((error) => {
-    console.error("Erro ao transferir produto:", error);
-    alert("Falha ao transferir produto no Firebase: " + error.message);
+    console.error("Erro ao transferir item:", error);
+    alert("Falha ao transferir item no Firebase: " + error.message);
   });
 }
 
 function mostrarDetalhesProduto(produtoId, origem) {
   const produto = produtos.find(p => p.id === produtoId);
   if (!produto) {
-    console.error("Produto não encontrado para ID:", produtoId);
-    alert("Erro: Produto não encontrado.");
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
     return;
   }
 
@@ -849,16 +1022,17 @@ function mostrarDetalhesProduto(produtoId, origem) {
   modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>Editar Produto: ${produto.nome}</h3>
+      <h3>Editar Item: ${produto.nome}</h3>
       <label>Nome:</label><input id="editNome" type="text" value="${produto.nome}" required><br>
+      <label>Identificador:</label><input id="editIdentificador" type="text" value="${produto.identificador || ''}" required><br>
       <label>Quantidade:</label><input id="editQuantidade" type="number" min="1" value="${produto.quantidade}" required><br>
-      <label>Categoria:</label><input id="editCategoria" type="text" value="${produto.categoria}" required><br>
+      <label>Andar:</label><input id="editCategoria" type="text" value="${produto.categoria}" required><br>
       <label>Valor Unitário:</label><input id="editValor" type="number" step="0.01" min="0" value="${produto.valor}" required><br>
       <label>Status:</label>
       <select id="editStatus" required>
         <option value="backup" ${produto.status === 'backup' ? 'selected' : ''}>Backup</option>
         <option value="operacao" ${produto.status === 'operacao' ? 'selected' : ''}>Operação</option>
-        <option value="necessario" ${produto.status === 'necessario' ? 'selected' : ''}>Necessário OPS</option>
+        <option value="necessario" ${produto.status === 'necessario' ? 'selected' : ''}>Lista de Compras</option>
         <option value="manutencao" ${produto.status === 'manutencao' ? 'selected' : ''}>Manutenção</option>
       </select><br>
       <label>Email (opcional):</label><input id="editEmail" type="email" value="${produto.email || ''}"><br>
@@ -870,6 +1044,7 @@ function mostrarDetalhesProduto(produtoId, origem) {
         <label>Agendamento (opcional):</label><input id="editAgendamento" type="text" value="${produto.agendamento || ''}"><br>
       ` : ''}
       <button id="confirmEditButton">Salvar</button>
+      <button onclick="excluirProduto('${produto.id}', '${origem}'); this.parentElement.parentElement.remove()">Excluir</button>
       <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
     </div>
   `;
@@ -889,12 +1064,13 @@ function confirmarEditarProduto(produtoId, origem) {
   const { doc, setDoc } = window.firestoreFunctions;
   const produto = produtos.find(p => p.id === produtoId);
   if (!produto) {
-    console.error("Produto não encontrado para ID:", produtoId);
-    alert("Erro: Produto não encontrado.");
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
     return;
   }
 
   const nome = document.getElementById('editNome')?.value.trim();
+  const identificador = document.getElementById('editIdentificador')?.value.trim();
   const quantidade = parseInt(document.getElementById('editQuantidade')?.value || 1);
   const categoria = document.getElementById('editCategoria')?.value.trim();
   const valor = parseFloat(document.getElementById('editValor')?.value || 0);
@@ -906,12 +1082,13 @@ function confirmarEditarProduto(produtoId, origem) {
   const custoManutencao = parseFloat(document.getElementById('editCustoManutencao')?.value || 0);
   const agendamento = document.getElementById('editAgendamento')?.value || '';
 
-  if (!nome || quantidade < 1 || !categoria || valor < 0 || !status) {
+  if (!nome || !identificador || quantidade < 1 || !categoria || valor < 0 || !status) {
     alert("Por favor, preencha todos os campos obrigatórios corretamente.");
     return;
   }
 
   produto.nome = nome;
+  produto.identificador = identificador;
   produto.quantidade = quantidade;
   produto.categoria = categoria;
   produto.valor = valor;
@@ -930,9 +1107,9 @@ function confirmarEditarProduto(produtoId, origem) {
     produto.agendamento = '';
   }
 
-  console.log("Atualizando produto no Firebase:", produto);
+  console.log("Atualizando item no Firebase:", produto);
   setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
-    console.log("Produto atualizado com sucesso no Firebase:", produto.id);
+    console.log("Item atualizado com sucesso no Firebase:", produto.id);
     document.querySelector('.modal')?.remove();
     const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
     atualizarDashboard(filtroCategoria);
@@ -947,18 +1124,18 @@ function confirmarEditarProduto(produtoId, origem) {
       listarProdutosPainel(filtroCategoria);
     }
   }).catch((error) => {
-    console.error("Erro ao editar produto:", error);
-    alert("Falha ao editar produto no Firebase: " + error.message);
+    console.error("Erro ao editar item:", error);
+    alert("Falha ao editar item no Firebase: " + error.message);
   });
 }
 
 function excluirProduto(produtoId, filtroStatus) {
-  if (confirm("Deseja realmente excluir este produto?") && typeof window.db !== 'undefined' && window.db && window.firestoreFunctions) {
+  if (confirm("Deseja realmente excluir este item?") && typeof window.db !== 'undefined' && window.db && window.firestoreFunctions) {
     const { doc, deleteDoc } = window.firestoreFunctions;
     const index = produtos.findIndex(p => p.id === produtoId);
     if (index === -1) {
-      console.error("Produto não encontrado para ID:", produtoId);
-      alert("Erro: Produto não encontrado.");
+      console.error("Item não encontrado para ID:", produtoId);
+      alert("Erro: Item não encontrado.");
       return;
     }
     deleteDoc(doc(window.db, "produtos", produtoId)).then(() => {
@@ -974,8 +1151,8 @@ function excluirProduto(produtoId, filtroStatus) {
         listarProdutos(filtroStatus);
       }
     }).catch((error) => {
-      console.error("Erro ao excluir produto:", error);
-      alert("Falha ao excluir produto do Firebase: " + error.message);
+      console.error("Erro ao excluir item:", error);
+      alert("Falha ao excluir item do Firebase: " + error.message);
     });
   }
 }
@@ -998,7 +1175,7 @@ function mostrarDetalhesReceita() {
     .map(([nome, qtd]) => `${nome}: ${qtd} unidades`)
     .join('\n');
 
-  alert(`Detalhes das Unidades em Manutenção${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalUnidades} unidade(s)\n\nProdutos:\n${detalhes || 'Nenhum item em manutenção.'}`);
+  alert(`Detalhes das Unidades em Manutenção${filtroCategoria ? ` (${filtroCategoria})` : ''}:\nTotal: ${totalUnidades} unidade(s)\n\nItens:\n${detalhes || 'Nenhum item em manutenção.'}`);
 }
 
 function atualizarDashboard(filtroCategoria = '') {
@@ -1027,7 +1204,6 @@ function atualizarDashboard(filtroCategoria = '') {
   listarProdutosPainel(filtroCategoria);
 }
 
-
 function carregarManutencao() {
   const tabela = document.getElementById("tabelaProdutosManutencao");
   if (!tabela) return;
@@ -1040,17 +1216,18 @@ function carregarManutencao() {
     .forEach((produto) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td onclick="mostrarDetalhesProduto('${produto.id}', 'manutencao')" style="cursor: pointer;">${produto.nome}</td>
+        <td>${produto.nome}</td>
         <td>${produto.defeito || 'N/A'}</td>
         <td><input type="text" value="${produto.localConserto || ''}" onchange="atualizarLocalConserto('${produto.id}', this.value)"></td>
         <td>${produto.custoManutencao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
         <td>${produto.agendamento || 'N/A'}</td>
-        <td>${produto.email || 'N/A'}</td>
-        <td>${produto.jogo || 'N/A'}</td>
-        <td>
-          <button onclick="mostrarModalTransferencia('${produto.id}', 'operacao', 'manutencao')">🚀 Operação</button>
-          <button onclick="mostrarModalTransferencia('${produto.id}', 'backup', 'manutencao')">📦 Backup</button>
-          <button onclick="mostrarModalTransferencia('${produto.id}', 'necessario', 'manutencao')">🔩 Necessário OPS</button>
+        <td class="menu-container">
+          <div class="menu-label">Menu</div>
+          <button class="menu-button" onclick="toggleMenu(this)">≡</button>
+          <div class="menu-options" style="display: none;">
+            <button onclick="mostrarModalSobre('${produto.id}')">Sobre</button>
+            <button onclick="mostrarModalEnviarItem('${produto.id}', 'manutencao')">Enviar Item</button>
+          </div>
         </td>
       `;
       tbody.appendChild(tr);
@@ -1075,7 +1252,7 @@ function atualizarListas() {
   if (secaoAtiva === 'manutencao') carregarManutencao();
   else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva)) listarProdutos(secaoAtiva);
   else if (secaoAtiva === 'categoria-detalhes') {
-    const nomeCategoria = document.querySelector('#secao-categoria-detalhes h3')?.textContent.replace('Detalhes da Categoria: ', '');
+    const nomeCategoria = document.querySelector('#secao-categoria-detalhes h3')?.textContent.replace('Detalhes do Andar: ', '');
     const categoriaId = categorias.find(c => c.nome === nomeCategoria)?.id || '';
     filtrarPorCategoria(nomeCategoria, categoriaId);
   } else if (secaoAtiva === 'painel') {
@@ -1105,6 +1282,140 @@ document.addEventListener('click', function (event) {
   }
 });
 
+function mostrarModalSobre(produtoId) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>Editar Detalhes: ${produto.nome}</h3>
+      <label>Nome:</label><input id="editNome" type="text" value="${produto.nome || ''}" required><br>
+      <label>Identificador:</label><input id="editIdentificador" type="text" value="${produto.identificador || ''}"><br>
+      <label>Quantidade:</label><input id="editQuantidade" type="number" min="1" value="${produto.quantidade || 1}" required><br>
+      <label>Andar:</label><input id="editCategoria" type="text" value="${produto.categoria || ''}"><br>
+      <label>Valor Unitário:</label><input id="editValor" type="number" step="0.01" min="0" value="${produto.valor || 0}" required><br>
+      <label>Status:</label>
+      <select id="editStatus" required>
+        <option value="backup" ${produto.status === 'backup' ? 'selected' : ''}>Backup</option>
+        <option value="operacao" ${produto.status === 'operacao' ? 'selected' : ''}>Operação</option>
+        <option value="necessario" ${produto.status === 'necessario' ? 'selected' : ''}>Lista de Compras</option>
+        <option value="manutencao" ${produto.status === 'manutencao' ? 'selected' : ''}>Manutenção</option>
+      </select><br>
+      <label>Email (opcional):</label><input id="editEmail" type="email" value="${produto.email || ''}"><br>
+      <label>Jogo (opcional):</label><input id="editJogo" type="text" value="${produto.jogo || ''}"><br>
+      <label>Defeito:</label><input id="editDefeito" type="text" value="${produto.defeito || ''}"><br>
+      <label>Local de Conserto:</label><input id="editLocalConserto" type="number" value="${produto.localConserto || 0}"><br>
+      <label>Custo de Manutenção:</label><input id="editCustoManutencao" type="number" step="0.01" value="${produto.custoManutencao || 0}"><br>
+      <label>Agendamento (opcional):</label><input id="editAgendamento" type="text" value="${produto.agendamento || ''}"><br>
+      <button id="confirmEditButton">Salvar</button>
+      <button onclick="excluirProduto('${produto.id}', 'todos'); this.parentElement.parentElement.remove()">Excluir</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const confirmButton = modal.querySelector('#confirmEditButton');
+  confirmButton.addEventListener('click', () => confirmarEditarSobre(produtoId));
+}
+
+function confirmarEditarSobre(produtoId) {
+  if (!window.db || !window.firestoreFunctions) {
+    console.error("Firebase não inicializado para edição.");
+    alert("Erro: Firebase não inicializado.");
+    return;
+  }
+
+  const { doc, setDoc } = window.firestoreFunctions;
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
+    return;
+  }
+
+  const nome = document.getElementById('editNome')?.value.trim();
+  const identificador = document.getElementById('editIdentificador')?.value.trim();
+  const quantidade = parseInt(document.getElementById('editQuantidade')?.value || 1);
+  const categoria = document.getElementById('editCategoria')?.value.trim();
+  const valor = parseFloat(document.getElementById('editValor')?.value || 0);
+  const status = document.getElementById('editStatus')?.value;
+  const email = document.getElementById('editEmail')?.value.trim() || '';
+  const jogo = document.getElementById('editJogo')?.value.trim() || '';
+  const defeito = document.getElementById('editDefeito')?.value.trim() || '';
+  const localConserto = document.getElementById('editLocalConserto')?.value.trim() || '';
+  const custoManutencao = parseFloat(document.getElementById('editCustoManutencao')?.value || 0);
+  const agendamento = document.getElementById('editAgendamento')?.value.trim() || '';
+
+  if (!nome || !identificador || quantidade < 1 || !categoria || valor < 0 || !status) {
+    alert("Por favor, preencha todos os campos obrigatórios corretamente.");
+    return;
+  }
+
+  produto.nome = nome;
+  produto.identificador = identificador;
+  produto.quantidade = quantidade;
+  produto.categoria = categoria;
+  produto.valor = valor;
+  produto.status = status;
+  produto.email = email;
+  produto.jogo = jogo;
+  produto.defeito = defeito;
+  produto.localConserto = localConserto;
+  produto.custoManutencao = custoManutencao;
+  produto.agendamento = agendamento;
+
+  console.log("Atualizando item no Firebase:", produto);
+  setDoc(doc(window.db, "produtos", produto.id), produto).then(() => {
+    console.log("Item atualizado com sucesso no Firebase:", produto.id);
+    document.querySelector('.modal')?.remove();
+    const filtroCategoria = document.getElementById('filtroCategoria')?.value || '';
+    atualizarDashboard(filtroCategoria);
+    const secaoAtiva = document.querySelector("main > section[style*='block']")?.id.replace('secao-', '');
+    if (secaoAtiva === 'painel') {
+      listarProdutosPainel(filtroCategoria);
+    } else if (['backup', 'operacao', 'necessario', 'todos'].includes(secaoAtiva)) {
+      listarProdutos(secaoAtiva);
+    } else if (secaoAtiva === 'manutencao') {
+      carregarManutencao();
+    } else if (secaoAtiva === 'categoria-detalhes') {
+      const nomeCategoria = document.querySelector('#secao-categoria-detalhes h3')?.textContent.replace('Detalhes do Andar: ', '');
+      const categoriaId = categorias.find(c => c.nome === nomeCategoria)?.id || '';
+      filtrarPorCategoria(nomeCategoria, categoriaId);
+    }
+  }).catch((error) => {
+    console.error("Erro ao editar item:", error);
+    alert("Falha ao editar item no Firebase: " + error.message);
+  });
+}
+
+function mostrarModalEnviarItem(produtoId, filtroStatus) {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) {
+    console.error("Item não encontrado para ID:", produtoId);
+    alert("Erro: Item não encontrado.");
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>Enviar Item: ${produto.nome}</h3>
+      <button id="enviarOperacao" onclick="mostrarModalTransferencia('${produto.id}', 'operacao')">Operação</button>
+      <button id="enviarBackup" onclick="mostrarModalTransferencia('${produto.id}', 'backup')">Backup</button>
+      <button id="enviarManutencao" onclick="mostrarModalTransferencia('${produto.id}', 'manutencao')">Manutenção</button>
+      <button onclick="this.parentElement.parentElement.remove()">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
 window.confirmarCriarProduto = confirmarCriarProduto;
 window.mostrarModalCriarProduto = mostrarModalCriarProduto;
 window.excluirProduto = excluirProduto;
@@ -1117,3 +1428,4 @@ window.mostrarModalExcluirCategoria = mostrarModalExcluirCategoria;
 window.atualizarCategoriaProduto = atualizarCategoriaProduto;
 window.voltar = voltar;
 window.confirmarEditarProduto = confirmarEditarProduto;
+window.mostrarModalEnviarItem = mostrarModalEnviarItem;
